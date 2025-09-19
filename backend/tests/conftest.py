@@ -8,7 +8,7 @@ from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 from app.main import app
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, get_current_admin
 from app.models import User, UserRole, Store, FoodItem, SurpriseBag
 from app.core.security import get_password_hash, create_access_token
 from app.core.config import settings
@@ -32,10 +32,48 @@ engine = create_engine(
 @pytest.fixture(scope="function")
 def session() -> Generator[Session, None, None]:
     """Create a test database session."""
+    # Enable PostGIS extension if using PostgreSQL
+    if "postgresql" in TEST_DATABASE_URL:
+        from sqlalchemy import text
+        try:
+            # Enable PostGIS extension using raw connection
+            with engine.connect() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis_topology;"))
+                conn.commit()
+            print("PostGIS extensions enabled successfully")
+        except Exception as e:
+            print(f"Warning: Could not enable PostGIS extensions: {e}")
+            # Continue anyway as tables might still work without PostGIS
+            pass
+    
+    # Force drop all tables first to handle schema changes
+    try:
+        SQLModel.metadata.drop_all(engine)
+        print("Dropped existing tables for schema updates")
+    except Exception as e:
+        print(f"Warning dropping tables: {e}")
+    
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
-    SQLModel.metadata.drop_all(engine)
+    
+    # Drop tables safely with constraint handling for circular dependencies
+    try:
+        SQLModel.metadata.drop_all(engine)
+    except Exception as e:
+        print(f"Warning: Error dropping tables (this is usually safe to ignore): {e}")
+        # Fallback: manually drop problematic tables
+        try:
+            with engine.connect() as conn:
+                from sqlalchemy import text
+                # Drop foreign key constraints first to avoid circular dependency
+                conn.execute(text("DROP TABLE IF EXISTS message CASCADE;"))
+                conn.execute(text("DROP TABLE IF EXISTS conversation CASCADE;"))
+                conn.commit()
+        except Exception as inner_e:
+            print(f"Manual table cleanup also failed: {inner_e}")
+            pass
 
 
 @pytest.fixture(scope="function")
@@ -55,11 +93,12 @@ def client(session: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture
 def test_customer(session: Session) -> User:
     """Create a test customer user."""
+    unique_id = str(uuid.uuid4())[:8]  # Use first 8 chars of UUID for uniqueness
     user = User(
         id=uuid.uuid4(),
         full_name="Test Customer",
-        phone_number="0123456789",
-        email="customer@test.com",
+        phone_number=f"01234{unique_id[:5]}",  # Unique phone number
+        email=f"customer{unique_id}@test.com",  # Unique email
         hashed_password=get_password_hash("testpassword"),
         role=UserRole.CUSTOMER
     )
@@ -72,11 +111,12 @@ def test_customer(session: Session) -> User:
 @pytest.fixture
 def test_vendor(session: Session) -> User:
     """Create a test vendor user."""
+    unique_id = str(uuid.uuid4())[:8]  # Use first 8 chars of UUID for uniqueness
     user = User(
         id=uuid.uuid4(),
         full_name="Test Vendor",
-        phone_number="0987654321",
-        email="vendor@test.com",
+        phone_number=f"09876{unique_id[:5]}",  # Unique phone number  
+        email=f"vendor{unique_id}@test.com",  # Unique email
         hashed_password=get_password_hash("testpassword"),
         role=UserRole.VENDOR
     )
@@ -89,11 +129,12 @@ def test_vendor(session: Session) -> User:
 @pytest.fixture
 def test_admin(session: Session) -> User:
     """Create a test admin user."""
+    unique_id = str(uuid.uuid4())[:8]  # Use first 8 chars of UUID for uniqueness
     user = User(
         id=uuid.uuid4(),
         full_name="Test Admin",
-        phone_number="0111222333",
-        email="admin@test.com",
+        phone_number=f"01112{unique_id[:5]}",  # Unique phone number
+        email=f"admin{unique_id}@test.com",  # Unique email
         hashed_password=get_password_hash("testpassword"),
         role=UserRole.ADMIN
     )
@@ -188,6 +229,9 @@ def admin_token(test_admin: User) -> str:
 @pytest.fixture
 def authenticated_customer_client(client: TestClient, test_customer: User, customer_token: str) -> TestClient:
     """Create an authenticated test client for customer."""
+    # Clear any existing overrides first
+    app.dependency_overrides.clear()
+    
     def get_current_user_override():
         return test_customer
 
@@ -200,6 +244,9 @@ def authenticated_customer_client(client: TestClient, test_customer: User, custo
 @pytest.fixture
 def authenticated_vendor_client(client: TestClient, test_vendor: User, vendor_token: str) -> TestClient:
     """Create an authenticated test client for vendor."""
+    # Clear any existing overrides first
+    app.dependency_overrides.clear()
+    
     def get_current_user_override():
         return test_vendor
 
@@ -212,10 +259,11 @@ def authenticated_vendor_client(client: TestClient, test_vendor: User, vendor_to
 @pytest.fixture
 def authenticated_admin_client(client: TestClient, test_admin: User, admin_token: str) -> TestClient:
     """Create an authenticated test client for admin."""
-    def get_current_user_override():
-        return test_admin
-
-    app.dependency_overrides[get_current_user] = get_current_user_override
+    # Clear any existing overrides first
+    app.dependency_overrides.clear()
+    
+    # Only override get_current_user - let get_current_admin use the normal logic
+    app.dependency_overrides[get_current_user] = lambda: test_admin
     client.headers.update({"Authorization": f"Bearer {admin_token}"})
     
     return client

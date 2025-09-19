@@ -64,7 +64,7 @@ def update_me(session: SessionDep, current_user: CurrentUser, user_update: UserU
                 detail="Phone number already exists",
             )
     
-    return crud.update_user(session=session, user=current_user, user_update=user_update)
+    return crud.update_user(session=session, db_user=current_user, user_in=user_update)
 
 @router.delete("/me", response_model=Message)
 def delete_me(session: SessionDep, current_user: CurrentUser) -> Any:

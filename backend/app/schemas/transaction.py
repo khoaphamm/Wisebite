@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlmodel import SQLModel, Field
 from app.models import TransactionMethod, TransactionStatus
@@ -10,7 +10,20 @@ class UserReadMinimal(SQLModel):
     full_name: Optional[str] = None
     phone_number: str
 
-# --- INPUT SCHEMAS (ADAPTED) ---
+# --- INPUT SCHEMAS (ENHANCED) ---
+
+class TransactionCreate(SQLModel):
+    """Create a new payment transaction."""
+    order_id: uuid.UUID
+    amount: float = Field(gt=0)
+    payment_method: str
+    payment_details: Optional[Dict[str, Any]] = None
+
+class RefundCreate(SQLModel):
+    """Create a refund transaction."""
+    transaction_id: uuid.UUID
+    amount: float = Field(gt=0)
+    reason: str
 
 class OrderConfirmPickupRequest(SQLModel):
     """
@@ -21,9 +34,34 @@ class OrderConfirmPickupRequest(SQLModel):
     order_id: uuid.UUID
     payment_method: TransactionMethod = Field(description="The payment method used (e.g., 'cash').")
 
-# --- OUTPUT SCHEMAS (UNCHANGED) ---
+# --- OUTPUT SCHEMAS (ENHANCED) ---
+
+class TransactionPublic(SQLModel):
+    """Public transaction response."""
+    id: uuid.UUID
+    order_id: Optional[uuid.UUID] = None
+    customer_id: Optional[uuid.UUID] = None
+    vendor_id: Optional[uuid.UUID] = None
+    amount: float
+    payment_method: str
+    status: str
+    transaction_type: str  # payment, refund, payout
+    created_at: datetime
+    payment_details: Optional[Dict[str, Any]] = None
+    original_transaction_id: Optional[uuid.UUID] = None  # For refunds
+    reason: Optional[str] = None  # For refunds
+
+class VendorTransactionSummary(SQLModel):
+    """Vendor financial summary."""
+    total_revenue: float
+    total_transactions: int
+    pending_payouts: float
+    completed_transactions: int
+    refunded_amount: float
+    date_range: Dict[str, str]
 
 class TransactionReadResponse(SQLModel):
+    """Legacy transaction response."""
     id: uuid.UUID
     order_id: uuid.UUID
     amount: float

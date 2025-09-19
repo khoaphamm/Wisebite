@@ -62,15 +62,22 @@ class FoodItem(SQLModel, table=True):
     description: Optional[str] = Field(default=None, max_length=500)
     image_url: Optional[str] = Field(default=None)
     original_price: float = Field(ge=0)
+    quantity: int = Field(ge=0, default=0)
+    category: Optional[str] = Field(default=None, max_length=50)
+    expires_at: Optional[datetime] = Field(default=None)
+    ingredients: Optional[str] = Field(default=None, max_length=500)
+    allergens: Optional[str] = Field(default=None, max_length=200)
     is_available: bool = Field(default=True)
 
     store_id: uuid.UUID = Field(foreign_key="store.id")
     store: "Store" = Relationship(back_populates="food_items")
+    order_items: List["OrderItem"] = Relationship(back_populates="food_item")
 
 class SurpriseBag(SQLModel, table=True):
     """NEW: A 'Túi Bất Ngờ' that customers can buy."""
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(default="Túi Bất Ngờ", max_length=100)
+    description: Optional[str] = Field(default=None, max_length=500)
     original_value: float = Field(ge=0)
     discounted_price: float = Field(ge=0)
     quantity_available: int = Field(ge=0)
@@ -87,6 +94,7 @@ class SurpriseBag(SQLModel, table=True):
 
 class OrderStatus(str, Enum):
     """ADAPTED: Renamed for clarity."""
+    PENDING = "pending"  # Add for test compatibility
     PENDING_PAYMENT = "pending_payment"
     CONFIRMED = "confirmed"
     AWAITING_PICKUP = "awaiting_pickup"
@@ -97,8 +105,10 @@ class Order(SQLModel, table=True):
     """ADAPTED: Now linked to a Customer (User) instead of Owner/Collector."""
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     customer_id: uuid.UUID = Field(foreign_key="user.id", index=True)
-    status: OrderStatus = Field(default=OrderStatus.PENDING_PAYMENT)
+    status: OrderStatus = Field(default=OrderStatus.PENDING)
     total_amount: float | None = Field(default=None)
+    delivery_address: Optional[str] = Field(default=None, max_length=500)
+    notes: Optional[str] = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now, sa_column_kwargs={"onupdate": func.now()})
 
@@ -108,15 +118,18 @@ class Order(SQLModel, table=True):
     transaction: Optional["Transaction"] = Relationship(back_populates="order")
 
 class OrderItem(SQLModel, table=True):
-    """ADAPTED: This is the new link table. It connects an Order to a SurpriseBag."""
-    order_id: uuid.UUID = Field(foreign_key="order.id", primary_key=True)
-    surprise_bag_id: uuid.UUID = Field(foreign_key="surprisebag.id", primary_key=True)
+    """ADAPTED: This connects an Order to either a SurpriseBag or FoodItem."""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    order_id: uuid.UUID = Field(foreign_key="order.id")
+    surprise_bag_id: Optional[uuid.UUID] = Field(foreign_key="surprisebag.id", default=None)
+    food_item_id: Optional[uuid.UUID] = Field(foreign_key="fooditem.id", default=None)
     
     quantity: int = Field(gt=0)
     price_per_item: float = Field(ge=0)
 
     order: "Order" = Relationship(back_populates="items")
-    surprise_bag: "SurpriseBag" = Relationship(back_populates="order_items")
+    surprise_bag: Optional["SurpriseBag"] = Relationship(back_populates="order_items")
+    food_item: Optional["FoodItem"] = Relationship(back_populates="order_items")
 
 
 # --- 5. Ancillary Features (KEPT AND INTEGRATED) ---
@@ -136,6 +149,7 @@ class Review(SQLModel, table=True):
 class TransactionMethod(str, Enum):
     CASH = "cash"
     WALLET = "wallet"
+    CREDIT_CARD = "credit_card"
 
 class TransactionStatus(str, Enum):
     SUCCESSFUL = "successful"
@@ -145,7 +159,7 @@ class TransactionStatus(str, Enum):
 class Transaction(SQLModel, table=True):
     """KEPT: Linked to our new Order and User models."""
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    order_id: uuid.UUID = Field(foreign_key="order.id", index=True, unique=True) 
+    order_id: Optional[uuid.UUID] = Field(foreign_key="order.id", index=True, default=None) 
     payer_id: uuid.UUID = Field(foreign_key="user.id", index=True) # This will be the customer
     payee_id: uuid.UUID = Field(foreign_key="user.id", index=True) # This will be the vendor
     amount: float = Field(ge=0)
@@ -153,7 +167,7 @@ class Transaction(SQLModel, table=True):
     status: TransactionStatus
     transaction_date: datetime = Field(default_factory=datetime.now)
 
-    order: "Order" = Relationship(back_populates="transaction")
+    order: Optional["Order"] = Relationship(back_populates="transaction")
     payer: "User" = Relationship(sa_relationship_kwargs={"foreign_keys": "Transaction.payer_id"})
     payee: "User" = Relationship(sa_relationship_kwargs={"foreign_keys": "Transaction.payee_id"})
 

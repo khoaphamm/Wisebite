@@ -18,7 +18,7 @@ class UserBase(SQLModel):
 class UserPublic(UserBase):
     id: uuid.UUID
     role: UserRole
-    avt_url: str
+    avt_url: str | None = None  # Allow None for avatar URL
     store: Optional[StorePublic] = None # NEW: Add store info for vendors
 
 class UsersPublic(SQLModel):

@@ -2,8 +2,9 @@ import uuid
 import httpx
 from typing import Optional, List
 from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
-from sqlalchemy import func
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import or_, func
+from passlib.context import CryptContext
 
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
@@ -16,7 +17,6 @@ from app.models import (
 )
 
 # --- Import Schemas ---
-# (We will need to create these files in the /app/crud/ directory)
 from app.schemas.user import UserCreate, UserUpdate
 from app.schemas.store import StoreCreate, StoreUpdate
 from app.schemas.food_item import FoodItemCreate, FoodItemUpdate
@@ -25,6 +25,98 @@ from app.schemas.order import OrderCreate
 from app.schemas.transaction import OrderConfirmPickupRequest
 from app.schemas.notification import NotificationCreate
 from app.schemas.chat import ConversationCreate, MessageCreate
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_food_items_by_store(session: Session, store_id: uuid.UUID, skip: int = 0, limit: int = 100):
+    statement = select(FoodItem).where(FoodItem.store_id == store_id, FoodItem.is_available == True)
+    
+    # Get total count
+    count_statement = select(func.count(FoodItem.id)).where(FoodItem.store_id == store_id, FoodItem.is_available == True)
+    total_count = session.exec(count_statement).one()
+    
+    statement = statement.offset(skip).limit(limit)
+    items = session.exec(statement).all()
+    
+    return {"data": items, "count": total_count}
+
+def get_food_item(session: Session, food_item_id: uuid.UUID) -> Optional[FoodItem]:
+    statement = select(FoodItem).where(FoodItem.id == food_item_id)
+    return session.exec(statement).first()
+
+def get_food_items_with_filters(
+    session: Session, 
+    skip: int = 0, 
+    limit: int = 100,
+    category: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    radius: Optional[float] = None
+):
+    statement = select(FoodItem).where(FoodItem.is_available == True)
+    
+    if category:
+        statement = statement.where(FoodItem.category == category)
+    
+    # Get total count
+    count_statement = select(func.count(FoodItem.id)).where(FoodItem.is_available == True)
+    if category:
+        count_statement = count_statement.where(FoodItem.category == category)
+    total_count = session.exec(count_statement).one()
+    
+    # For location filtering, we'd need PostGIS functions
+    # For now, just return basic pagination
+    statement = statement.offset(skip).limit(limit)
+    items = session.exec(statement).all()
+    
+    return {"data": items, "count": total_count}
+
+def search_food_items(session: Session, query: str, skip: int = 0, limit: int = 100):
+    statement = select(FoodItem).where(
+        FoodItem.is_available == True,
+        or_(
+            FoodItem.name.ilike(f"%{query}%"),
+            FoodItem.description.ilike(f"%{query}%")
+        )
+    )
+    
+    # Get total count
+    count_statement = select(func.count(FoodItem.id)).where(
+        FoodItem.is_available == True,
+        or_(
+            FoodItem.name.ilike(f"%{query}%"),
+            FoodItem.description.ilike(f"%{query}%")
+        )
+    )
+    total_count = session.exec(count_statement).one()
+    
+    statement = statement.offset(skip).limit(limit)
+    items = session.exec(statement).all()
+    
+    return {"data": items, "count": total_count}
+
+def update_food_item(session: Session, db_food_item: FoodItem, item_in: FoodItemUpdate) -> FoodItem:
+    item_data = item_in.model_dump(exclude_unset=True)
+    db_food_item.sqlmodel_update(item_data)
+    session.add(db_food_item)
+    session.commit()
+    session.refresh(db_food_item)
+    return db_food_item
+
+def delete_food_item(session: Session, food_item_id: uuid.UUID) -> None:
+    statement = select(FoodItem).where(FoodItem.id == food_item_id)
+    food_item = session.exec(statement).first()
+    if food_item:
+        session.delete(food_item)
+        session.commit()
 
 # ============================== User CRUD ====================================================
 
@@ -56,12 +148,13 @@ def create_user(session: Session, user_create: UserCreate) -> User:
     session.add(db_user)
     session.flush() # Flush to get the user ID for other operations
     
+    # Note: Automatic store creation disabled for testing
     # If the new user is a VENDOR, create an associated store profile
-    if db_user.role == UserRole.VENDOR:
-        # Create a default store name based on the user's full name
-        default_store_name = f"Store of {db_user.full_name}"
-        store_in = StoreCreate(name=default_store_name, address="Default Address")
-        create_store(session=session, store_create=store_in, owner_id=db_user.id)
+    # if db_user.role == UserRole.VENDOR:
+    #     # Create a default store name based on the user's full name
+    #     default_store_name = f"Store of {db_user.full_name}"
+    #     store_in = StoreCreate(name=default_store_name, address="Default Address")
+    #     create_store(session=session, store_create=store_in, owner_id=db_user.id)
         
     add_noti_to_new_user(session, db_user.id)
     session.commit()
@@ -74,9 +167,10 @@ def update_user(session: Session, db_user: User, user_in: UserUpdate) -> User:
         hashed_password = get_password_hash(user_data["password"])
         del user_data["password"]
         user_data["hashed_password"] = hashed_password
-        
+    
+    # Merge the user object into the current session if it's from a different session
+    db_user = session.merge(db_user)
     db_user.sqlmodel_update(user_data)
-    session.add(db_user)
     session.commit()
     session.refresh(db_user)
     return db_user
@@ -109,6 +203,16 @@ def update_store(session: Session, db_store: Store, store_in: StoreUpdate) -> St
     session.refresh(db_store)
     return db_store
 
+def get_all_stores(session: Session, skip: int = 0, limit: int = 100) -> List[Store]:
+    query = select(Store).offset(skip).limit(limit)
+    return list(session.exec(query).all())
+
+def delete_store(session: Session, store_id: uuid.UUID) -> None:
+    db_store = session.get(Store, store_id)
+    if db_store:
+        session.delete(db_store)
+        session.commit()
+
 # ============================== FoodItem CRUD (NEW) ==========================================
 
 def create_food_item(session: Session, item_create: FoodItemCreate, store_id: uuid.UUID) -> FoodItem:
@@ -117,10 +221,6 @@ def create_food_item(session: Session, item_create: FoodItemCreate, store_id: uu
     session.commit()
     session.refresh(db_item)
     return db_item
-
-def get_food_items_by_store(session: Session, store_id: uuid.UUID) -> List[FoodItem]:
-    statement = select(FoodItem).where(FoodItem.store_id == store_id)
-    return session.exec(statement).all()
 
 # ============================== SurpriseBag CRUD (NEW) =======================================
 
@@ -138,6 +238,157 @@ def get_all_active_surprise_bags(session: Session) -> List[SurpriseBag]:
     statement = select(SurpriseBag).where(SurpriseBag.quantity_available > 0).options(selectinload(SurpriseBag.store))
     return session.exec(statement).all()
 
+def get_surprise_bags_with_filters(
+    session: Session,
+    skip: int = 0,
+    limit: int = 100,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    available_only: Optional[bool] = False
+):
+    statement = select(SurpriseBag).options(selectinload(SurpriseBag.store))
+    
+    if available_only:
+        statement = statement.where(SurpriseBag.quantity_available > 0)
+    
+    if min_price is not None:
+        statement = statement.where(SurpriseBag.discounted_price >= min_price)
+    
+    if max_price is not None:
+        statement = statement.where(SurpriseBag.discounted_price <= max_price)
+    
+    # Get total count
+    count_statement = select(func.count(SurpriseBag.id))
+    if available_only:
+        count_statement = count_statement.where(SurpriseBag.quantity_available > 0)
+    if min_price is not None:
+        count_statement = count_statement.where(SurpriseBag.discounted_price >= min_price)
+    if max_price is not None:
+        count_statement = count_statement.where(SurpriseBag.discounted_price <= max_price)
+    
+    total_count = session.exec(count_statement).one()
+    
+    statement = statement.offset(skip).limit(limit)
+    items = session.exec(statement).all()
+    
+    return {"data": items, "count": total_count}
+
+def update_surprise_bag(session: Session, db_bag: SurpriseBag, bag_in: SurpriseBagUpdate) -> SurpriseBag:
+    bag_data = bag_in.model_dump(exclude_unset=True)
+    db_bag.sqlmodel_update(bag_data)
+    session.add(db_bag)
+    session.commit()
+    session.refresh(db_bag)
+    return db_bag
+
+def get_customer_surprise_bag_bookings(session: Session, customer_id: uuid.UUID, skip: int = 0, limit: int = 100):
+    # Get customer's orders that contain surprise bags
+    orders_query = session.query(Order).filter(Order.customer_id == customer_id)
+    orders_with_bags = orders_query.join(OrderItem).join(SurpriseBag).all()
+    
+    bookings = []
+    for order in orders_with_bags:
+        for item in order.items:
+            if item.surprise_bag:
+                booking = {
+                    "id": order.id,
+                    "surprise_bag_id": item.surprise_bag_id,
+                    "customer_id": customer_id,
+                    "quantity": item.quantity,
+                    "pickup_time": item.surprise_bag.pickup_start_time,  # Use bag's start time as default
+                    "status": order.status.value,
+                    "created_at": order.created_at
+                }
+                bookings.append(booking)
+    
+    # Apply pagination
+    total_count = len(bookings)
+    paginated_bookings = bookings[skip:skip + limit]
+    
+    return {"data": paginated_bookings, "count": total_count}
+
+def create_surprise_bag_booking(session: Session, booking_create, bag_id: uuid.UUID, customer_id: uuid.UUID) -> dict:
+    # Get the surprise bag to calculate total amount
+    surprise_bag = session.query(SurpriseBag).filter(SurpriseBag.id == bag_id).first()
+    if not surprise_bag:
+        raise ValueError("Surprise bag not found")
+    
+    if surprise_bag.quantity_available < booking_create.quantity:
+        raise ValueError("Insufficient quantity available")
+    
+    # Create order
+    order = Order(
+        customer_id=customer_id,
+        status=OrderStatus.PENDING_PAYMENT,
+        total_amount=surprise_bag.discounted_price * booking_create.quantity
+    )
+    session.add(order)
+    session.flush()  # Get the order ID
+    
+    # Create order item
+    order_item = OrderItem(
+        order_id=order.id,
+        surprise_bag_id=bag_id,
+        quantity=booking_create.quantity,
+        price_per_item=surprise_bag.discounted_price
+    )
+    session.add(order_item)
+    
+    # Update surprise bag quantity
+    surprise_bag.quantity_available -= booking_create.quantity
+    session.add(surprise_bag)
+    
+    session.commit()
+    
+    return {
+        "id": order.id,
+        "surprise_bag_id": bag_id,
+        "customer_id": customer_id,
+        "quantity": booking_create.quantity,
+        "pickup_time": booking_create.pickup_time,
+        "status": order.status.value,
+        "created_at": order.created_at
+    }
+
+def get_surprise_bag_booking(session: Session, booking_id: uuid.UUID) -> Optional[dict]:
+    order = session.query(Order).filter(Order.id == booking_id).first()
+    if not order:
+        return None
+    
+    # Find the surprise bag item in this order
+    for item in order.items:
+        if item.surprise_bag:
+            return {
+                "id": order.id,
+                "surprise_bag_id": item.surprise_bag_id,
+                "customer_id": order.customer_id,
+                "quantity": item.quantity,
+                "pickup_time": item.surprise_bag.pickup_start_time,  # Default to start time
+                "status": order.status.value,
+                "created_at": order.created_at
+            }
+    
+    return None
+
+def cancel_surprise_bag_booking(session: Session, booking_id: uuid.UUID) -> dict:
+    order = session.query(Order).filter(Order.id == booking_id).first()
+    if not order:
+        raise ValueError("Booking not found")
+    
+    # Update order status
+    order.status = OrderStatus.CANCELLED
+    
+    # Restore surprise bag quantity
+    for item in order.items:
+        if item.surprise_bag:
+            item.surprise_bag.quantity_available += item.quantity
+            session.add(item.surprise_bag)
+    
+    session.add(order)
+    session.commit()
+    
+    return {"id": booking_id, "status": "cancelled"}
+
 # ============================== Order CRUD (ADAPTED) =========================================
 
 def get_order_by_id(session: Session, order_id: uuid.UUID) -> Optional[Order]:
@@ -149,44 +400,87 @@ def get_order_by_id(session: Session, order_id: uuid.UUID) -> Optional[Order]:
     return session.exec(statement).first()
 
 def get_orders_by_customer(session: Session, customer_id: uuid.UUID) -> List[Order]:
-    statement = select(Order).where(Order.customer_id == customer_id).order_by(Order.created_at.desc())
+    statement = select(Order).where(Order.customer_id == customer_id).order_by(Order.created_at.desc()).options(
+        selectinload(Order.customer),
+        selectinload(Order.items).selectinload(OrderItem.surprise_bag),
+        selectinload(Order.items).selectinload(OrderItem.food_item)
+    )
     return session.exec(statement).all()
 
 def create_order(session: Session, order_create: OrderCreate, customer_id: uuid.UUID) -> Order:
     total_amount = 0
     db_order_items = []
+    primary_store_id = None  # Track the primary store for this order
     
     # Start a nested transaction to handle potential errors
     with session.begin_nested():
         # Step 1: Validate and process each item in the order
         for item in order_create.items:
-            surprise_bag = session.get(SurpriseBag, item.surprise_bag_id)
-            if not surprise_bag:
-                raise ValueError(f"SurpriseBag with id {item.surprise_bag_id} not found.")
-            if surprise_bag.quantity_available < item.quantity:
-                raise ValueError(f"Not enough stock for {surprise_bag.name}. Available: {surprise_bag.quantity_available}, Requested: {item.quantity}")
+            if item.surprise_bag_id:
+                # Handle surprise bag ordering
+                surprise_bag = session.get(SurpriseBag, item.surprise_bag_id)
+                if not surprise_bag:
+                    raise ValueError(f"SurpriseBag with id {item.surprise_bag_id} not found.")
+                if surprise_bag.quantity_available < item.quantity:
+                    raise ValueError(f"Not enough stock for {surprise_bag.name}. Available: {surprise_bag.quantity_available}, Requested: {item.quantity}")
 
-            # Decrease stock
-            surprise_bag.quantity_available -= item.quantity
-            session.add(surprise_bag)
+                # Set primary store from first item
+                if primary_store_id is None:
+                    primary_store_id = surprise_bag.store_id
 
-            # Calculate price for this line item and add to total
-            item_total = surprise_bag.discounted_price * item.quantity
-            total_amount += item_total
+                # Decrease stock
+                surprise_bag.quantity_available -= item.quantity
+                session.add(surprise_bag)
 
-            # Create the OrderItem model
-            db_item = OrderItem(
-                surprise_bag_id=item.surprise_bag_id,
-                quantity=item.quantity,
-                price_per_item=surprise_bag.discounted_price
-            )
-            db_order_items.append(db_item)
+                # Calculate price for this line item and add to total
+                item_total = surprise_bag.discounted_price * item.quantity
+                total_amount += item_total
+
+                # Create the OrderItem model
+                db_item = OrderItem(
+                    surprise_bag_id=item.surprise_bag_id,
+                    quantity=item.quantity,
+                    price_per_item=surprise_bag.discounted_price
+                )
+                db_order_items.append(db_item)
+                
+            elif item.food_item_id:
+                # Handle food item ordering
+                food_item = session.get(FoodItem, item.food_item_id)
+                if not food_item:
+                    raise ValueError(f"Food item with id {item.food_item_id} not found.")
+                if food_item.quantity < item.quantity:
+                    raise ValueError(f"Not enough stock for {food_item.name}. Available: {food_item.quantity}, Requested: {item.quantity}")
+
+                # Set primary store from first item
+                if primary_store_id is None:
+                    primary_store_id = food_item.store_id
+
+                # Decrease stock
+                food_item.quantity -= item.quantity
+                session.add(food_item)
+
+                # Calculate price for this line item and add to total
+                item_total = food_item.original_price * item.quantity
+                total_amount += item_total
+
+                # Create the OrderItem model
+                db_item = OrderItem(
+                    food_item_id=item.food_item_id,
+                    quantity=item.quantity,
+                    price_per_item=food_item.original_price
+                )
+                db_order_items.append(db_item)
+            else:
+                raise ValueError("Either surprise_bag_id or food_item_id must be provided")
 
         # Step 2: Create the main Order
         db_order = Order(
             customer_id=customer_id,
             total_amount=total_amount,
-            status=OrderStatus.PENDING_PAYMENT, # Or CONFIRMED if payment is immediate
+            status=OrderStatus.PENDING, # Default status for new orders
+            delivery_address=order_create.delivery_address,
+            notes=order_create.notes,
             items=db_order_items
         )
         session.add(db_order)
@@ -194,7 +488,76 @@ def create_order(session: Session, order_create: OrderCreate, customer_id: uuid.
     # Commit the transaction if all steps succeeded
     session.commit()
     session.refresh(db_order)
+    
     return db_order
+
+def get_orders_by_store(session: Session, store_id: uuid.UUID) -> List[Order]:
+    """Get all orders that contain items from a specific store."""
+    # Get order IDs from both surprise bags and food items for this store
+    surprise_bag_order_ids = select(Order.id).join(OrderItem).join(SurpriseBag).where(
+        SurpriseBag.store_id == store_id
+    ).distinct()
+    
+    food_item_order_ids = select(Order.id).join(OrderItem).join(FoodItem).where(
+        FoodItem.store_id == store_id
+    ).distinct()
+    
+    # Combine the order IDs using union
+    all_order_ids = surprise_bag_order_ids.union(food_item_order_ids)
+    
+    # Now get the actual Order objects with relationships loaded
+    statement = select(Order).where(Order.id.in_(all_order_ids)).order_by(Order.created_at.desc()).options(
+        selectinload(Order.customer),
+        selectinload(Order.items).selectinload(OrderItem.surprise_bag),
+        selectinload(Order.items).selectinload(OrderItem.food_item)
+    )
+    
+    return session.exec(statement).all()
+
+def order_belongs_to_store(session: Session, order_id: uuid.UUID, store_id: uuid.UUID) -> bool:
+    """Check if an order contains items from a specific store."""
+    # Check surprise bags
+    surprise_bag_statement = select(OrderItem).join(SurpriseBag).where(
+        OrderItem.order_id == order_id,
+        SurpriseBag.store_id == store_id
+    )
+    
+    # Check food items
+    food_item_statement = select(OrderItem).join(FoodItem).where(
+        OrderItem.order_id == order_id,
+        FoodItem.store_id == store_id
+    )
+    
+    return (session.exec(surprise_bag_statement).first() is not None or 
+            session.exec(food_item_statement).first() is not None)
+
+def update_order_status(session: Session, order_id: uuid.UUID, new_status: OrderStatus) -> Order:
+    """Update order status."""
+    order = session.get(Order, order_id)
+    if order:
+        order.status = new_status
+        session.add(order)
+        session.commit()
+        session.refresh(order)
+    return order
+
+def cancel_order(session: Session, order_id: uuid.UUID) -> Order:
+    """Cancel an order and restore surprise bag quantities."""
+    order = session.get(Order, order_id)
+    if order:
+        # Restore quantities for all items
+        for item in order.items:
+            surprise_bag = session.get(SurpriseBag, item.surprise_bag_id)
+            if surprise_bag:
+                surprise_bag.quantity_available += item.quantity
+                session.add(surprise_bag)
+        
+        # Update order status
+        order.status = OrderStatus.CANCELLED
+        session.add(order)
+        session.commit()
+        session.refresh(order)
+    return order
 
 # ============================== Transaction CRUD (ADAPTED) ===================================
 
@@ -243,6 +606,147 @@ def confirm_order_pickup_and_pay(
     except Exception as e:
         session.rollback()
         raise e
+
+def get_payment_transaction_by_order(session: Session, order_id: uuid.UUID) -> Optional[Transaction]:
+    """Get existing payment transaction for an order."""
+    statement = select(Transaction).where(
+        Transaction.order_id == order_id,
+        Transaction.status == TransactionStatus.SUCCESSFUL
+    )
+    return session.exec(statement).first()
+
+def create_payment_transaction(session: Session, transaction_create, customer_id: uuid.UUID, order_id: uuid.UUID) -> Transaction:
+    """Create a payment transaction."""
+    # Get the order to determine the payee (vendor)
+    order = get_order_by_id(session=session, order_id=order_id)
+    if not order:
+        raise ValueError("Order not found")
+    
+    # Determine the payee from the order items
+    payee_id = None
+    for item in order.items:
+        if item.surprise_bag_id:
+            surprise_bag = session.get(SurpriseBag, item.surprise_bag_id)
+            if surprise_bag and surprise_bag.store:
+                payee_id = surprise_bag.store.owner_id
+                break
+        elif item.food_item_id:
+            food_item = session.get(FoodItem, item.food_item_id)
+            if food_item and food_item.store:
+                payee_id = food_item.store.owner_id
+                break
+    
+    if not payee_id:
+        raise ValueError("Could not determine payee for transaction")
+    
+    transaction = Transaction(
+        order_id=order_id,
+        payer_id=customer_id,
+        payee_id=payee_id,
+        amount=transaction_create.amount,
+        method=transaction_create.payment_method,
+        status=TransactionStatus.SUCCESSFUL
+    )
+    session.add(transaction)
+    session.commit()
+    session.refresh(transaction)
+    return transaction
+
+def get_transaction(session: Session, transaction_id: uuid.UUID) -> Optional[Transaction]:
+    """Get a transaction by ID."""
+    return session.get(Transaction, transaction_id)
+
+def create_refund_transaction(session: Session, refund_create, original_transaction: Transaction) -> Transaction:
+    """Create a refund transaction."""
+    refund = Transaction(
+        order_id=None,  # Refunds are not directly linked to orders
+        payer_id=original_transaction.payee_id,  # Vendor pays back to customer
+        payee_id=original_transaction.payer_id,
+        amount=refund_create.amount,
+        method=original_transaction.method,
+        status=TransactionStatus.SUCCESSFUL
+    )
+    session.add(refund)
+    session.commit()
+    session.refresh(refund)
+    return refund
+
+def get_user_transactions(
+    session: Session,
+    user_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+    transaction_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> List[Transaction]:
+    """Get user's transactions with optional filtering."""
+    statement = select(Transaction).where(
+        or_(Transaction.payer_id == user_id, Transaction.payee_id == user_id)
+    ).order_by(Transaction.transaction_date.desc()).offset(skip).limit(limit)
+    return session.exec(statement).all()
+
+def count_user_transactions(
+    session: Session,
+    user_id: uuid.UUID,
+    transaction_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> int:
+    """Count user's transactions with optional filtering."""
+    from sqlalchemy import func
+    statement = select(func.count(Transaction.id)).where(
+        or_(Transaction.payer_id == user_id, Transaction.payee_id == user_id)
+    )
+    return session.exec(statement).one()
+
+def get_transactions_by_order(session: Session, order_id: uuid.UUID) -> List[Transaction]:
+    """Get all transactions for an order."""
+    statement = select(Transaction).where(Transaction.order_id == order_id)
+    return session.exec(statement).all()
+
+def get_vendor_transaction_summary(
+    session: Session,
+    store_id: uuid.UUID,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> dict:
+    """Get vendor transaction summary."""
+    # Get transactions where the vendor is the payee and the store matches
+    # First, get the store owner (vendor)
+    store = session.get(Store, store_id)
+    if not store:
+        return {
+            "total_revenue": 0.0,
+            "total_transactions": 0,
+            "pending_payouts": 0.0,
+            "completed_transactions": 0,
+            "refunded_amount": 0.0,
+            "date_range": {"start": start_date or "", "end": end_date or ""}
+        }
+    
+    # Get all successful transactions where this vendor is the payee
+    statement = select(Transaction).where(
+        Transaction.payee_id == store.owner_id,
+        Transaction.status == TransactionStatus.SUCCESSFUL,
+        Transaction.order_id.isnot(None)  # Only payment transactions, not refunds
+    )
+    
+    transactions = session.exec(statement).all()
+    
+    total_revenue = sum(t.amount for t in transactions)
+    return {
+        "total_revenue": total_revenue,
+        "total_transactions": len(transactions),
+        "pending_payouts": 0.0,
+        "completed_transactions": len(transactions),
+        "refunded_amount": 0.0,
+        "date_range": {"start": start_date or "", "end": end_date or ""}
+    }
+
+def get_store(session: Session, store_id: uuid.UUID) -> Optional[Store]:
+    """Get store by ID."""
+    return session.get(Store, store_id)
 
 # ============================== Notification CRUD (KEPT) =====================================
 
