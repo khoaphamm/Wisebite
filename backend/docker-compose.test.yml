@@ -1,0 +1,39 @@
+# Docker Compose configuration for testing WiseBite Backend
+
+version: '3.8'
+
+services:
+  # Test PostgreSQL Database
+  test_db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: wisebite_test_db
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wisebite_test_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    # Use tmpfs for faster test execution (data won't persist)
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  # Optional: Test runner service
+  test_runner:
+    build: .
+    environment:
+      - ENVIRONMENT=test
+    env_file:
+      - .env.test
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+    depends_on:
+      test_db:
+        condition: service_healthy
+    command: ["pytest", "--cov=app", "--cov-report=term-missing", "-v"]
+    profiles:
+      - test

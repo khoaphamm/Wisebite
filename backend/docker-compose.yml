@@ -1,0 +1,72 @@
+# /backend/docker-compose.yml
+
+services:
+  # Service 1: Your FastAPI Application
+  app:
+    # Build the image from the Dockerfile in the current directory (.)
+    build: .
+    # Forward port 8000 on your host machine to port 8000 in the container
+    ports:
+      - "8000:8000"
+    # Mount the local 'app' directory into the container's '/app/app' directory.
+    # This allows for hot-reloading: changes you make to your code locally
+    # will instantly be reflected in the running container.
+    volumes:
+      - ./app:/app/app
+    # Load environment variables from the .env file
+    env_file:
+      - .env
+    # This is a crucial line: it tells this service to wait until the 'db' service
+    # is healthy and ready before starting up. This prevents connection errors.
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Service 2: The PostgreSQL Database with PostGIS
+  db:
+    # Use the official PostGIS image (PostgreSQL with PostGIS extension)
+    image: postgis/postgis:15-3.4
+    # Persist database data on your host machine in a 'postgres_data' volume.
+    # THIS IS CRITICAL. Without this, you lose all your data when you stop the container.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    # Load database configuration (user, password, db name) from the .env file
+    env_file:
+      - .env
+    # Expose the database port (optional, but good for debugging with a DB client)
+    ports:
+      - "5432:5432"
+    # This healthcheck tells Docker Compose how to know when the database is
+    # ready to accept connections. The 'app' service waits for this.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service 3: Test PostgreSQL Database (separate from main DB)
+  test_db:
+    # Use the same PostgreSQL image as main DB
+    image: postgres:15
+    # Use separate volume for test data (optional, can be ephemeral)
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data/
+    # Test database configuration
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: wisebite_test_db
+    # Use different port to avoid conflicts
+    ports:
+      - "5433:5432"
+    # Health check for test database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wisebite_test_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Define the named volumes for persisting database data
+volumes:
+  postgres_data:
+  test_postgres_data:
