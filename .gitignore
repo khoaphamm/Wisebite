@@ -143,6 +143,63 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Example Frontend
+exampleFrontend/
+
+# Android build files and directories
+*.apk
+*.aar
+*.ap_
+*.aab
+*.dex
+*.class
+frontend/Wisebite/build/
+frontend/Wisebite/.gradle/
+frontend/Wisebite/.kotlin/
+frontend/Wisebite/app/build/
+frontend/Wisebite/local.properties
+frontend/Wisebite/captures/
+frontend/Wisebite/.externalNativeBuild/
+frontend/Wisebite/.cxx/
+frontend/Wisebite/*.iml
+frontend/Wisebite/proguard/
+frontend/Wisebite/lint/
+frontend/Wisebite/*.hprof
+frontend/Wisebite/obj/
+frontend/Wisebite/freeline/
+frontend/Wisebite/freeline.py
+frontend/Wisebite/freeline_project_description.json
+frontend/Wisebite/fastlane/report.xml
+frontend/Wisebite/fastlane/Preview.html
+frontend/Wisebite/fastlane/screenshots
+frontend/Wisebite/fastlane/test_output
+frontend/Wisebite/fastlane/readme.md
+
+# Android Studio and IntelliJ IDEA files (specific to Android project)
+frontend/Wisebite/.idea/workspace.xml
+frontend/Wisebite/.idea/tasks.xml
+frontend/Wisebite/.idea/gradle.xml
+frontend/Wisebite/.idea/assetWizardSettings.xml
+frontend/Wisebite/.idea/dictionaries
+frontend/Wisebite/.idea/libraries
+frontend/Wisebite/.idea/caches
+frontend/Wisebite/.idea/modules.xml
+frontend/Wisebite/.idea/navEditor.xml
+frontend/Wisebite/.idea/.name
+frontend/Wisebite/.idea/compiler.xml
+frontend/Wisebite/.idea/copyright/
+frontend/Wisebite/.idea/encodings.xml
+frontend/Wisebite/.idea/misc.xml
+frontend/Wisebite/.idea/scopes/
+frontend/Wisebite/.idea/vcs.xml
+frontend/Wisebite/.idea/jsLibraryMappings.xml
+frontend/Wisebite/.idea/datasources.xml
+frontend/Wisebite/.idea/dataSources.ids
+frontend/Wisebite/.idea/sqlDataSources.xml
+frontend/Wisebite/.idea/dynamic.xml
+frontend/Wisebite/.idea/uiDesigner.xml
+frontend/Wisebite/.idea/httpRequests
+
 # Backup files
 *.backup
 *.bak
