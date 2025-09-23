@@ -2,80 +2,89 @@ package com.example.wisebite.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Colors - Orange/Food themed
-val Orange500 = Color(0xFFFF9800)
-val Orange700 = Color(0xFFF57C00)
-val Orange200 = Color(0xFFFFCC02)
+// Primary Colors - Warm cream/beige theme inspired by the image
+val Cream50 = Color(0xFFFFFBF0)  // Slightly more beige background like in image
+val Cream100 = Color(0xFFFFF8E8) // Light cream
+val Cream200 = Color(0xFFFFF3D6) // Medium cream 
+val Cream300 = Color(0xFFFFEEB8) // Darker cream
+val Cream400 = Color(0xFFFFE89A) // Gold cream
+val Cream500 = Color(0xFFFFE082) // Main cream color
 
-// Secondary Colors - Green/Fresh themed  
-val Green500 = Color(0xFF4CAF50)
-val Green700 = Color(0xFF388E3C)
-val Green200 = Color(0xFF81C784)
+// Green accent colors from the image
+val Green50 = Color(0xFFF1F8E9)   // Very light green
+val Green100 = Color(0xFFDCEDC8) // Light green
+val Green200 = Color(0xFFC8E6C9) // Medium light green
+val Green300 = Color(0xFFA5D6A7) // Medium green
+val Green400 = Color(0xFF81C784) // Bright green
+val Green500 = Color(0xFF66BB6A) // Main green from image
+val Green600 = Color(0xFF4CAF50) // Deeper green
+val Green700 = Color(0xFF388E3C) // Dark green
+val Green800 = Color(0xFF2E7D32) // Very dark green
 
-// Neutral Colors
-val Grey50 = Color(0xFFFAFAFA)
-val Grey100 = Color(0xFFF5F5F5)
-val Grey200 = Color(0xFFEEEEEE)
-val Grey300 = Color(0xFFE0E0E0)
-val Grey400 = Color(0xFFBDBDBD)
-val Grey500 = Color(0xFF9E9E9E)
-val Grey600 = Color(0xFF757575)
-val Grey700 = Color(0xFF616161)
-val Grey800 = Color(0xFF424242)
-val Grey900 = Color(0xFF212121)
+// Neutral Colors - Warmer tones
+val WarmGrey50 = Color(0xFFFAF9F7)
+val WarmGrey100 = Color(0xFFF5F4F2)
+val WarmGrey200 = Color(0xFFEFEDE8)
+val WarmGrey300 = Color(0xFFE8E5E0)
+val WarmGrey400 = Color(0xFFD3CFC7)
+val WarmGrey500 = Color(0xFFB8B3A8)
+val WarmGrey600 = Color(0xFF9E9A8E)
+val WarmGrey700 = Color(0xFF7A7669)
+val WarmGrey800 = Color(0xFF5C5A4F)
+val WarmGrey900 = Color(0xFF3E3D35)
 
 // System Colors
 val White = Color(0xFFFFFFFF)
 val Black = Color(0xFF000000)
 val Error = Color(0xFFD32F2F)
-val Success = Color(0xFF2E7D32)
-val Warning = Color(0xFFF57C00)
+val Success = Green600
+val Warning = Color(0xFFFF8F00)
 
-// Food-themed accent colors
-val FoodRed = Color(0xFFE53935)
-val FoodYellow = Color(0xFFFFC107)
-val FoodPurple = Color(0xFF8E24AA)
-
-// Light Theme Colors
-val LightPrimary = Orange500
+// Light Theme Colors - Cream and Green theme
+val LightPrimary = Green500
 val LightOnPrimary = White
-val LightPrimaryContainer = Orange200
-val LightOnPrimaryContainer = Orange700
+val LightPrimaryContainer = Green100
+val LightOnPrimaryContainer = Green800
 
-val LightSecondary = Green500
-val LightOnSecondary = White
-val LightSecondaryContainer = Green200
-val LightOnSecondaryContainer = Green700
+val LightSecondary = Cream400
+val LightOnSecondary = WarmGrey800
+val LightSecondaryContainer = Cream200
+val LightOnSecondaryContainer = WarmGrey700
 
-val LightBackground = White
-val LightOnBackground = Grey900
-val LightSurface = White
-val LightOnSurface = Grey900
-val LightSurfaceVariant = Grey100
-val LightOnSurfaceVariant = Grey700
+val LightBackground = Cream50   // Main background like in the image
+val LightOnBackground = WarmGrey900
+val LightSurface = Cream100
+val LightOnSurface = WarmGrey900
+val LightSurfaceVariant = Cream200
+val LightOnSurfaceVariant = WarmGrey700
 
-val LightOutline = Grey400
+val LightOutline = WarmGrey400
 val LightError = Error
 val LightOnError = White
 
-// Dark Theme Colors
-val DarkPrimary = Orange200
-val DarkOnPrimary = Orange700
-val DarkPrimaryContainer = Orange700
-val DarkOnPrimaryContainer = Orange200
+// Card and button colors to match the image
+val LightCardBackground = White
+val LightButtonPrimary = Green500
+val LightButtonSecondary = WarmGrey200
 
-val DarkSecondary = Green200
-val DarkOnSecondary = Green700
-val DarkSecondaryContainer = Green700
-val DarkOnSecondaryContainer = Green200
+// Dark Theme Colors - Warmer dark theme
+val DarkPrimary = Green300
+val DarkOnPrimary = Green800
+val DarkPrimaryContainer = Green700
+val DarkOnPrimaryContainer = Green100
 
-val DarkBackground = Grey900
-val DarkOnBackground = Grey100
-val DarkSurface = Grey800
-val DarkOnSurface = Grey100
-val DarkSurfaceVariant = Grey700
-val DarkOnSurfaceVariant = Grey300
+val DarkSecondary = Cream300
+val DarkOnSecondary = WarmGrey800
+val DarkSecondaryContainer = WarmGrey700
+val DarkOnSecondaryContainer = Cream200
 
-val DarkOutline = Grey600
+val DarkBackground = WarmGrey900
+val DarkOnBackground = Cream100
+val DarkSurface = WarmGrey800
+val DarkOnSurface = Cream100
+val DarkSurfaceVariant = WarmGrey700
+val DarkOnSurfaceVariant = WarmGrey300
+
+val DarkOutline = WarmGrey600
 val DarkError = Color(0xFFFFB4AB)
 val DarkOnError = Color(0xFF690005)

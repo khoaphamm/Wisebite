@@ -8,8 +8,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.wisebite.data.repository.AuthRepository
+import com.example.wisebite.ui.screen.BagDetailsScreen
 import com.example.wisebite.ui.screen.HomeScreen
 import com.example.wisebite.ui.screen.LoginScreen
+import com.example.wisebite.ui.screen.MainScreen
 import com.example.wisebite.ui.screen.SignupScreen
 import com.example.wisebite.ui.viewmodel.LoginViewModel
 import com.example.wisebite.ui.viewmodel.SignupViewModel
@@ -62,11 +64,27 @@ fun WisebiteNavigation(
         }
         
         composable(Routes.HOME) {
-            HomeScreen(
+            MainScreen(
                 onLogout = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
+                },
+                onNavigateToBagDetails = {
+                    navController.navigate(Routes.BAG_DETAILS)
+                }
+            )
+        }
+        
+        composable(Routes.BAG_DETAILS) {
+            BagDetailsScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onOrderClick = {
+                    // Handle order placement - could navigate to order confirmation
+                    // For now, just go back to home
+                    navController.popBackStack()
                 }
             )
         }

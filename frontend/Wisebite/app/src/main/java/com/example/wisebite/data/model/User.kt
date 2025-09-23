@@ -1,7 +1,7 @@
 package com.example.wisebite.data.model
 
 import com.google.gson.annotations.SerializedName
-import com.example.wisebite.ui.co   mponent.CountryCode
+import com.example.wisebite.ui.component.CountryCode
 import java.util.Date
 
 data class User(
