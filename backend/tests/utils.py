@@ -29,25 +29,8 @@ def create_random_store_data() -> Dict[str, Any]:
         "name": f"Test Store {random_id}",
         "description": f"A test store for {random_id}",
         "address": f"123 Test Street {random_id}, Ho Chi Minh City",
-        "phone_number": f"091234{random_id[:4]}",
-        "email": f"store{random_id}@example.com",
-        "latitude": 10.7769 + random.uniform(-0.1, 0.1),
-        "longitude": 106.7009 + random.uniform(-0.1, 0.1),
-        "category": random.choice(["restaurant", "bakery", "cafe", "market"])
-    }
-
-
-def create_random_store_data() -> Dict[str, Any]:
-    """Generate random store data for testing."""
-    random_id = str(uuid.uuid4())[:8]
-    return {
-        "name": f"Test Store {random_id}",
-        "description": f"A test store for {random_id}",
-        "address": f"123 Test Street {random_id}",
-        "phone": f"091234{random_id[:4]}",
-        "email": f"store{random_id}@example.com",
-        "latitude": 10.7769,
-        "longitude": 106.7009
+        "latitude": 10.7769 + random.uniform(-0.01, 0.01),  # Small variation around Ho Chi Minh City
+        "longitude": 106.7009 + random.uniform(-0.01, 0.01)
     }
 
 
