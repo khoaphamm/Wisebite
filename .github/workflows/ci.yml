@@ -55,8 +55,8 @@ jobs:
         TEST_DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5433/wisebite_test
         POSTGRES_HOST: localhost
         POSTGRES_PORT: 5433
-        env:POSTGRES_USER: test_user
-        env:POSTGRES_PASSWORD: test_password
+        POSTGRES_USER: test_user
+        POSTGRES_PASSWORD: test_password
         POSTGRES_DB: wisebite_test
         ENVIRONMENT: test
         SECRET_KEY: test-secret-key-for-jwt-tokens-change-this-in-production
