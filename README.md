@@ -16,13 +16,30 @@ WiseBite is a comprehensive platform that connects customers with local vendors 
 
 ```
 Wisebite/
+├── .github/                  # CI/CD workflows
+│   ├── workflows/           
+│   │   ├── ci.yml           # Backend CI using docker-compose.test
+│   │   └── android.yml      # Android CI
+│   └── README.md            # CI/CD documentation
 ├── backend/                 # FastAPI backend server
 │   ├── app/                # Main application code
 │   ├── tests/              # Test suite
 │   ├── docker-compose.yml  # Docker configuration
+│   ├── docker-compose.test.yml  # Test environment configuration
 │   └── README.md           # Backend documentation
+├── frontend/               # Android frontend application
 └── README.md               # This file
 ```
+
+## 🔄 Continuous Integration
+
+This repository includes automated CI/CD pipelines:
+
+- **Backend CI**: Automatically tests the FastAPI backend using the `docker-compose.test.yml` configuration
+- **Android CI**: Builds and tests the Android application
+- **Coverage**: Tracks test coverage and uploads reports to Codecov
+
+See [.github/README.md](.github/README.md) for detailed CI/CD documentation.
 
 ## 🚀 Quick Start
 
