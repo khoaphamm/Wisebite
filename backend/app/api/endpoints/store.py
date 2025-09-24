@@ -1,9 +1,9 @@
 import uuid
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Query
 from app.api.deps import SessionDep, CurrentVendor, CurrentUser
 from app import crud
-from app.schemas.store import StorePublic, StoreUpdate, StoreCreate
+from app.schemas.store import StorePublic, StoreUpdate, StoreCreate, StoreWithDistance
 
 router = APIRouter()
 
@@ -27,6 +27,26 @@ def list_stores(
 ):
     """ Get a list of all public stores. """
     return crud.get_all_stores(session=session, skip=skip, limit=limit)
+
+@router.get("/nearby", response_model=List[StoreWithDistance])
+def list_nearby_stores(
+    session: SessionDep,
+    latitude: float = Query(..., description="Latitude of the search location"),
+    longitude: float = Query(..., description="Longitude of the search location"),
+    radius: float = Query(10.0, ge=0.1, le=100.0, description="Search radius in kilometers"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100)
+):
+    """ Get stores within a specified radius from a location, sorted by distance. """
+    stores = crud.get_stores_within_radius(
+        session=session,
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius,
+        skip=skip,
+        limit=limit
+    )
+    return stores
 
 @router.get("/me", response_model=StorePublic)
 def get_my_store(session: SessionDep, current_vendor: CurrentVendor):

@@ -3,7 +3,10 @@ import httpx
 from typing import Optional, List
 from sqlmodel import Session, select
 from sqlalchemy.orm import joinedload, selectinload
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, text
+from sqlalchemy.sql import func as sqla_func
+from geoalchemy2.functions import ST_Distance_Sphere, ST_MakePoint, ST_X, ST_Y
+from geoalchemy2 import WKTElement
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -188,8 +191,56 @@ def get_store_by_owner_id(session: Session, owner_id: uuid.UUID) -> Optional[Sto
     statement = select(Store).where(Store.owner_id == owner_id)
     return session.exec(statement).first()
 
+def _extract_coordinates_from_store(session: Session, store: Store) -> tuple[Optional[float], Optional[float]]:
+    """Extract latitude and longitude from PostGIS location field."""
+    if not store.location:
+        return None, None
+    
+    try:
+        lat_result = session.execute(select(ST_Y(store.location))).scalar()
+        lon_result = session.execute(select(ST_X(store.location))).scalar()
+        return lat_result, lon_result
+    except Exception:
+        return None, None
+
+def get_store_with_location(session: Session, store_id: uuid.UUID) -> Optional[dict]:
+    """Get store by ID with location coordinates extracted."""
+    store = session.get(Store, store_id)
+    if not store:
+        return None
+    
+    lat, lon = _extract_coordinates_from_store(session, store)
+    
+    return {
+        "id": store.id,
+        "name": store.name,
+        "address": store.address,
+        "description": store.description,
+        "logo_url": store.logo_url,
+        "owner_id": store.owner_id,
+        "latitude": lat,
+        "longitude": lon
+    }
+
 def create_store(session: Session, store_create: StoreCreate, owner_id: uuid.UUID) -> Store:
-    db_store = Store.model_validate(store_create, update={"owner_id": owner_id})
+    store_data = store_create.model_dump(exclude_unset=True)
+    
+    # Handle location data
+    location = None
+    if store_create.latitude is not None and store_create.longitude is not None:
+        # Create PostGIS POINT geometry using WKTElement
+        point_wkt = f"POINT({store_create.longitude} {store_create.latitude})"
+        location = WKTElement(point_wkt, srid=4326)
+    
+    # Remove latitude/longitude from store_data as they're not direct fields
+    store_data.pop("latitude", None)
+    store_data.pop("longitude", None)
+    store_data["owner_id"] = owner_id
+    
+    db_store = Store(**store_data)
+    if location is not None:
+        db_store.location = location
+    
     session.add(db_store)
     session.commit()
     session.refresh(db_store)
@@ -197,6 +248,18 @@ def create_store(session: Session, store_create: StoreCreate, owner_id: uuid.UUI
 
 def update_store(session: Session, db_store: Store, store_in: StoreUpdate) -> Store:
     store_data = store_in.model_dump(exclude_unset=True)
+    
+    # Handle location data
+    if store_in.latitude is not None and store_in.longitude is not None:
+        # Update location using PostGIS
+        point_wkt = f"POINT({store_in.longitude} {store_in.latitude})"
+        location = WKTElement(point_wkt, srid=4326)
+        store_data["location"] = location
+    
+    # Remove latitude/longitude from store_data as they're not direct fields
+    store_data.pop("latitude", None)
+    store_data.pop("longitude", None)
+    
     db_store.sqlmodel_update(store_data)
     session.add(db_store)
     session.commit()
@@ -206,6 +269,59 @@ def update_store(session: Session, db_store: Store, store_in: StoreUpdate) -> St
 def get_all_stores(session: Session, skip: int = 0, limit: int = 100) -> List[Store]:
     query = select(Store).offset(skip).limit(limit)
     return list(session.exec(query).all())
+
+def get_stores_within_radius(
+    session: Session,
+    latitude: float,
+    longitude: float,
+    radius_km: float = 10.0,
+    skip: int = 0,
+    limit: int = 100
+) -> List[dict]:
+    """
+    Get stores within a specified radius from a given location, sorted by distance.
+    Returns list of dicts with store data and distance_km.
+    """
+    # Create a point for the search location
+    search_point = WKTElement(f"POINT({longitude} {latitude})", srid=4326)
+    
+    # Query stores with distance calculation
+    # ST_Distance_Sphere calculates distance in meters, divide by 1000 for km
+    from sqlalchemy.orm import Query
+    from sqlalchemy import and_
+    
+    query = session.query(
+        Store,
+        (ST_Distance_Sphere(Store.location, search_point) / 1000).label('distance_km')
+    ).filter(
+        and_(
+            Store.location.isnot(None),
+            ST_Distance_Sphere(Store.location, search_point) <= radius_km * 1000  # Convert km to meters
+        )
+    ).order_by(
+        'distance_km'
+    ).offset(skip).limit(limit)
+    
+    results = []
+    for store, distance_km in query.all():
+        store_dict = {
+            "id": store.id,
+            "name": store.name,
+            "address": store.address,
+            "description": store.description,
+            "logo_url": store.logo_url,
+            "owner_id": store.owner_id,
+            "distance_km": round(distance_km, 2) if distance_km else None
+        }
+        
+        # Extract latitude and longitude from PostGIS location if available
+        lat, lon = _extract_coordinates_from_store(session, store)
+        store_dict["latitude"] = lat
+        store_dict["longitude"] = lon
+            
+        results.append(store_dict)
+    
+    return results
 
 def delete_store(session: Session, store_id: uuid.UUID) -> None:
     db_store = session.get(Store, store_id)
