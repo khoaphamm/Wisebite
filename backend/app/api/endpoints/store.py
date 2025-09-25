@@ -104,6 +104,56 @@ async def list_stores_with_travel_info(
     
     return result
 
+
+@router.get("/{store_id}/with-travel-info", response_model=StoreWithTravelInfo)
+async def get_store_with_travel_info(
+    store_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentVendor,  # Allow both vendors and customers
+    user_latitude: float = Query(..., description="User's current latitude"),
+    user_longitude: float = Query(..., description="User's current longitude"),
+    travel_methods: Optional[str] = Query("driving,walking", description="Comma-separated travel methods (driving, walking)")
+):
+    """
+    Get travel information for a specific store.
+    This allows users to see distance and travel time to a particular store.
+    """
+    # Get the specific store
+    store = crud.get_store_by_id(session=session, store_id=store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
+    # Check if store has coordinates
+    if store.latitude is None or store.longitude is None:
+        # Return store without travel info if no coordinates available
+        return StoreWithTravelInfo(**store.model_dump())
+    
+    # Prepare coordinates for Mapbox API
+    user_origin = (user_longitude, user_latitude)  # Mapbox expects (lng, lat)
+    destination = (store.longitude, store.latitude)
+    
+    # Get travel information from Mapbox for single destination
+    travel_info = await get_travel_info_multi_profile(user_origin, [destination])
+    
+    # Combine store data with travel information
+    store_dict = store.model_dump()
+    
+    if travel_info:
+        # Add travel information if available
+        if travel_info.get("driving") and len(travel_info["driving"]) > 0:
+            driving_info = travel_info["driving"][0]
+            if driving_info:
+                store_dict["travel_time_driving_seconds"] = driving_info.get("duration")
+                store_dict["travel_distance_driving_meters"] = driving_info.get("distance")
+        
+        if travel_info.get("walking") and len(travel_info["walking"]) > 0:
+            walking_info = travel_info["walking"][0]
+            if walking_info:
+                store_dict["travel_time_walking_seconds"] = walking_info.get("duration")
+                store_dict["travel_distance_walking_meters"] = walking_info.get("distance")
+    
+    return StoreWithTravelInfo(**store_dict)
+
 @router.get("/nearby", response_model=List[StoreWithDistance])
 def list_nearby_stores(
     session: SessionDep,
