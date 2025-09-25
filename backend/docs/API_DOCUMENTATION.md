@@ -370,6 +370,79 @@ List all stores with pagination.
 - `skip` (int, default: 0): Number of records to skip
 - `limit` (int, default: 20): Number of records to return
 
+### GET `/api/v1/stores/with-travel-info`
+Get stores with distance and travel time information for vendors.
+
+**Authentication:** Required (Vendor only)
+
+**Description:** Allows vendors to see the distance and estimated travel time (both driving and walking) from their current location to each store.
+
+**Query Parameters:**
+- `vendor_latitude` (float, required): Vendor's current latitude
+- `vendor_longitude` (float, required): Vendor's current longitude  
+- `radius` (float, default: 50.0): Search radius in kilometers (0.1-100.0)
+- `skip` (int, default: 0): Number of records to skip
+- `limit` (int, default: 100): Number of records to return (1-100)
+- `travel_methods` (string, default: "driving,walking"): Comma-separated travel methods
+
+**Response (200):**
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440030",
+    "name": "Joe's Pizza Palace",
+    "description": "Best pizza in town",
+    "address": "456 Food Street, Ho Chi Minh City",
+    "latitude": 10.762622,
+    "longitude": 106.660172,
+    "owner_id": "550e8400-e29b-41d4-a716-446655440003",
+    "distance_km": 5.2,
+    "travel_time_driving_seconds": 900,
+    "travel_time_walking_seconds": 3600,
+    "travel_distance_driving_meters": 5000,
+    "travel_distance_walking_meters": 4500
+  }
+]
+```
+
+**Response Fields:**
+- `distance_km`: Straight-line distance in kilometers
+- `travel_time_driving_seconds`: Estimated driving time in seconds
+- `travel_time_walking_seconds`: Estimated walking time in seconds  
+- `travel_distance_driving_meters`: Actual driving distance in meters
+- `travel_distance_walking_meters`: Actual walking distance in meters
+
+**Error Responses:**
+- `403`: Customer trying to access vendor-only endpoint
+- `422`: Invalid query parameters (missing coords, invalid radius)
+
+### GET `/api/v1/stores/nearby`
+Get stores within a specified radius from a location.
+
+**Authentication:** Not required
+
+**Query Parameters:**
+- `latitude` (float, required): Search center latitude
+- `longitude` (float, required): Search center longitude
+- `radius` (float, default: 10.0): Search radius in kilometers (0.1-100.0)
+- `skip` (int, default: 0): Number of records to skip
+- `limit` (int, default: 100): Number of records to return
+
+**Response (200):**
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440030",
+    "name": "Joe's Pizza Palace", 
+    "address": "456 Food Street, Ho Chi Minh City",
+    "latitude": 10.762622,
+    "longitude": 106.660172,
+    "owner_id": "550e8400-e29b-41d4-a716-446655440003",
+    "distance_km": 5.2
+  }
+]
+```
+
 ## User Endpoints
 
 ### GET `/api/v1/users/me`
