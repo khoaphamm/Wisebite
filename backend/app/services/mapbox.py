@@ -4,7 +4,8 @@ from typing import List, Tuple, Dict, Optional
 
 async def get_travel_info_from_mapbox(
     origin: Tuple[float, float], # (lng, lat)
-    destinations: List[Tuple[float, float]] # Danh sách (lng, lat)
+    destinations: List[Tuple[float, float]], # Danh sách (lng, lat)
+    profile: str = "mapbox/driving-traffic" # driving, walking, cycling
 ) -> List[Dict[str, float]] | None:
     """
    USE MAPBOX MATRIX API to get travel duration and distance from origin to multiple destinations.
@@ -14,8 +15,6 @@ async def get_travel_info_from_mapbox(
 
     # Định dạng tọa độ: lon,lat;lon,lat;...
     coords_str = f"{origin[0]},{origin[1]};" + ";".join([f"{lon},{lat}" for lon, lat in destinations])
-    
-    profile = "mapbox/driving-traffic" # driving, walking, cycling
 
     request_url = f"https://api.mapbox.com/directions-matrix/v1/{profile}/{coords_str}"
     params = {
@@ -44,6 +43,28 @@ async def get_travel_info_from_mapbox(
         except Exception as e:
             print(f"Error calling Mapbox Matrix API: {e}")
             return None
+
+
+async def get_travel_info_multi_profile(
+    origin: Tuple[float, float], # (lng, lat)
+    destinations: List[Tuple[float, float]] # Danh sách (lng, lat)
+) -> Dict[str, List[Dict[str, float]]] | None:
+    """
+    Get travel information for multiple profiles (driving and walking).
+    Returns a dict with profile names as keys and travel info lists as values.
+    """
+    if not destinations:
+        return {"driving": [], "walking": []}
+
+    results = {}
+    profiles = ["mapbox/driving-traffic", "mapbox/walking"]
+    profile_names = ["driving", "walking"]
+
+    for profile, profile_name in zip(profiles, profile_names):
+        travel_info = await get_travel_info_from_mapbox(origin, destinations, profile)
+        results[profile_name] = travel_info if travel_info is not None else []
+
+    return results
         
 
 async def get_route_from_mapbox(start_lon: float, start_lat: float, end_lon: float, end_lat: float):

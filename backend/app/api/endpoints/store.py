@@ -3,7 +3,8 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Query
 from app.api.deps import SessionDep, CurrentVendor, CurrentUser
 from app import crud
-from app.schemas.store import StorePublic, StoreUpdate, StoreCreate, StoreWithDistance
+from app.schemas.store import StorePublic, StoreUpdate, StoreCreate, StoreWithDistance, StoreWithTravelInfo
+from app.services.mapbox import get_travel_info_multi_profile
 
 router = APIRouter()
 
@@ -27,6 +28,81 @@ def list_stores(
 ):
     """ Get a list of all public stores. """
     return crud.get_all_stores(session=session, skip=skip, limit=limit)
+
+@router.get("/with-travel-info", response_model=List[StoreWithTravelInfo])
+async def list_stores_with_travel_info(
+    session: SessionDep,
+    current_vendor: CurrentVendor,
+    vendor_latitude: float = Query(..., description="Vendor's current latitude"),
+    vendor_longitude: float = Query(..., description="Vendor's current longitude"),
+    radius: float = Query(50.0, ge=0.1, le=100.0, description="Search radius in kilometers"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    travel_methods: Optional[str] = Query("driving,walking", description="Comma-separated travel methods (driving, walking)")
+):
+    """
+    Get stores with distance and travel time information for vendors.
+    This allows vendors to see how far and how long it takes to reach each store.
+    """
+    # Get nearby stores first
+    stores = crud.get_stores_within_radius(
+        session=session,
+        latitude=vendor_latitude,
+        longitude=vendor_longitude,
+        radius_km=radius,
+        skip=skip,
+        limit=limit
+    )
+    
+    if not stores:
+        return []
+    
+    # Prepare coordinates for Mapbox API
+    vendor_origin = (vendor_longitude, vendor_latitude)  # Mapbox expects (lng, lat)
+    destinations = []
+    store_coords_map = {}
+    
+    for i, store in enumerate(stores):
+        if store.latitude is not None and store.longitude is not None:
+            destinations.append((store.longitude, store.latitude))
+            store_coords_map[i] = store.id
+    
+    if not destinations:
+        # Return stores without travel info if no coordinates available
+        return [
+            StoreWithTravelInfo(**store.model_dump())
+            for store in stores
+        ]
+    
+    # Get travel information from Mapbox
+    travel_info = await get_travel_info_multi_profile(vendor_origin, destinations)
+    
+    # Combine store data with travel information
+    result = []
+    dest_index = 0
+    
+    for store in stores:
+        store_dict = store.model_dump()
+        
+        if store.latitude is not None and store.longitude is not None and travel_info:
+            # Add travel information if available
+            if travel_info.get("driving") and dest_index < len(travel_info["driving"]):
+                driving_info = travel_info["driving"][dest_index]
+                if driving_info:
+                    store_dict["travel_time_driving_seconds"] = driving_info.get("duration")
+                    store_dict["travel_distance_driving_meters"] = driving_info.get("distance")
+            
+            if travel_info.get("walking") and dest_index < len(travel_info["walking"]):
+                walking_info = travel_info["walking"][dest_index]
+                if walking_info:
+                    store_dict["travel_time_walking_seconds"] = walking_info.get("duration")
+                    store_dict["travel_distance_walking_meters"] = walking_info.get("distance")
+            
+            dest_index += 1
+        
+        result.append(StoreWithTravelInfo(**store_dict))
+    
+    return result
 
 @router.get("/nearby", response_model=List[StoreWithDistance])
 def list_nearby_stores(

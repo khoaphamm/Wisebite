@@ -28,3 +28,10 @@ class StorePublic(StoreBase):
 
 class StoreWithDistance(StorePublic):
     distance_km: Optional[float] = None
+
+class StoreWithTravelInfo(StorePublic):
+    distance_km: Optional[float] = None
+    travel_time_driving_seconds: Optional[float] = None
+    travel_time_walking_seconds: Optional[float] = None
+    travel_distance_driving_meters: Optional[float] = None
+    travel_distance_walking_meters: Optional[float] = None
