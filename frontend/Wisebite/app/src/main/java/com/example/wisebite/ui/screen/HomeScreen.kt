@@ -37,6 +37,7 @@ fun HomeScreen(
             .fillMaxSize()
             .background(color = MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
+            .padding(top = 16.dp)
     ) {
         // Consistent header
         WisebiteHeader(

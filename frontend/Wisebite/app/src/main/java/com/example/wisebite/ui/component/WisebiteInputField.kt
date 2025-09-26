@@ -37,7 +37,8 @@ fun WisebiteInputField(
     onValueChange: (String) -> Unit,
     placeholder: String,
     isPassword: Boolean = false,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    errorMessage: String? = null
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -72,12 +73,22 @@ fun WisebiteInputField(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = LightSurface,
                 unfocusedContainerColor = LightSurface,
-                unfocusedBorderColor = Color.Transparent,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = if (errorMessage != null) MaterialTheme.colorScheme.error else Color.Transparent,
+                focusedBorderColor = if (errorMessage != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 cursorColor = MaterialTheme.colorScheme.primary,
                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
                 unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
             )
         )
+        
+        // Error message display
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }

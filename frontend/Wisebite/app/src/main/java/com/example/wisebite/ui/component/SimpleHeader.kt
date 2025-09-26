@@ -16,23 +16,39 @@ import com.example.wisebite.ui.theme.*
 fun SimpleHeader(
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onBackClick: (() -> Unit)? = null,
     action: @Composable (() -> Unit)? = null
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
-        Text(
-            text = title,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black,
-            letterSpacing = 0.5.sp
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                letterSpacing = 0.5.sp
+            )
+            
+            action?.invoke()
+        }
         
-        action?.invoke()
+        subtitle?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = it,
+                fontSize = 16.sp,
+                color = Color.Gray,
+                lineHeight = 24.sp
+            )
+        }
     }
 }

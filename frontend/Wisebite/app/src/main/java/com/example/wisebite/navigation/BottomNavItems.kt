@@ -3,10 +3,10 @@ package com.example.wisebite.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.outlined.ListAlt
 import androidx.compose.ui.graphics.vector.ImageVector
 
 data class BottomNavItem(
@@ -18,19 +18,19 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem(
-        title = "Home",
+        title = "",
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home,
         route = Routes.HOME
     ),
     BottomNavItem(
-        title = "Orders",
-        selectedIcon = Icons.Filled.ShoppingCart,
-        unselectedIcon = Icons.Outlined.ShoppingCart,
+        title = "",
+        selectedIcon = Icons.Filled.ListAlt,
+        unselectedIcon = Icons.Outlined.ListAlt,
         route = Routes.ORDERS
     ),
     BottomNavItem(
-        title = "Profile",
+        title = "",
         selectedIcon = Icons.Filled.Person,
         unselectedIcon = Icons.Outlined.Person,
         route = Routes.PROFILE

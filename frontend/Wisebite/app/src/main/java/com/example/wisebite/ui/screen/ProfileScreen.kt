@@ -42,6 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wisebite.R
 import com.example.wisebite.data.repository.AuthRepository
 import com.example.wisebite.ui.component.SimpleHeader
+import com.example.wisebite.ui.component.ProfileCardWithImageUpload
 import com.example.wisebite.ui.theme.*
 import com.example.wisebite.ui.viewmodel.ProfileViewModel
 import com.example.wisebite.ui.viewmodel.ProfileViewModelFactory
@@ -49,12 +50,18 @@ import com.example.wisebite.ui.viewmodel.ProfileViewModelFactory
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit = {},
-    onNavigateToEditProfile: () -> Unit = {}
+    onNavigateToEditProfile: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToPaymentMethods: () -> Unit = {},
+    onNavigateToPrivacySecurity: () -> Unit = {},
+    onNavigateToHelpSupport: () -> Unit = {},
+    onNavigateToShareApp: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val authRepository = AuthRepository.getInstance(context)
     val viewModel: ProfileViewModel = viewModel(
-        factory = ProfileViewModelFactory(authRepository)
+        factory = ProfileViewModelFactory(authRepository, context)
     )
     
     val uiState by viewModel.uiState.collectAsState()
@@ -113,10 +120,30 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
-            ProfileCard(
+            // Show success message
+            uiState.uploadSuccess?.let { success ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Green100
+                    )
+                ) {
+                    Text(
+                        text = success,
+                        color = Green500,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            ProfileCardWithImageUpload(
                 userName = uiState.user?.fullName ?: "Loading...",
                 userEmail = uiState.user?.email ?: "Loading...",
-                onEditClick = onNavigateToEditProfile
+                avatarUrl = uiState.user?.avatarUrl,
+                isUploadingAvatar = uiState.isUploadingAvatar,
+                onEditClick = onNavigateToEditProfile,
+                onAvatarSelected = { uri -> viewModel.uploadAvatar(uri) }
             )
             Spacer(modifier = Modifier.height(16.dp))
             DonationCard()
@@ -127,7 +154,13 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(16.dp))
             SettingsSection(
                 onLogout = { viewModel.logout(onLogout) },
-                onEditProfile = onNavigateToEditProfile
+                onEditProfile = onNavigateToEditProfile,
+                onNavigateToNotifications = onNavigateToNotifications,
+                onNavigateToPaymentMethods = onNavigateToPaymentMethods,
+                onNavigateToPrivacySecurity = onNavigateToPrivacySecurity,
+                onNavigateToHelpSupport = onNavigateToHelpSupport,
+                onNavigateToShareApp = onNavigateToShareApp,
+                onNavigateToSettings = onNavigateToSettings
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
@@ -364,7 +397,13 @@ fun WiseTokenCard() {
 @Composable
 fun SettingsSection(
     onLogout: () -> Unit,
-    onEditProfile: () -> Unit = {}
+    onEditProfile: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToPaymentMethods: () -> Unit = {},
+    onNavigateToPrivacySecurity: () -> Unit = {},
+    onNavigateToHelpSupport: () -> Unit = {},
+    onNavigateToShareApp: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -390,7 +429,12 @@ fun SettingsSection(
                     onClick = {
                         when (text) {
                             "Chỉnh sửa hồ sơ" -> onEditProfile()
-                            else -> {/* TODO: Implement other menu actions */}
+                            "Thông báo" -> onNavigateToNotifications()
+                            "Phương thức thanh toán" -> onNavigateToPaymentMethods()
+                            "Quyền riêng tư & Bảo mật" -> onNavigateToPrivacySecurity()
+                            "Trợ giúp & Hỗ trợ" -> onNavigateToHelpSupport()
+                            "Chia sẻ ứng dụng" -> onNavigateToShareApp()
+                            "Cài đặt" -> onNavigateToSettings()
                         }
                     }
                 )

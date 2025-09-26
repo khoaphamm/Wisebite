@@ -98,7 +98,8 @@ fun SignupContent(
                 label = "Họ và tên",
                 value = uiState.fullName,
                 onValueChange = onFullNameChange,
-                placeholder = "Nhập họ và tên của bạn"
+                placeholder = "Nhập họ và tên của bạn",
+                errorMessage = uiState.fullNameError
             )
 
             WisebiteInputField(
@@ -106,7 +107,8 @@ fun SignupContent(
                 value = uiState.email,
                 onValueChange = onEmailChange,
                 placeholder = "Nhập địa chỉ email của bạn",
-                keyboardType = KeyboardType.Email
+                keyboardType = KeyboardType.Email,
+                errorMessage = uiState.emailError
             )
 
             PhoneNumberInput(
@@ -123,7 +125,8 @@ fun SignupContent(
                 value = uiState.password,
                 onValueChange = onPasswordChange,
                 placeholder = "Tạo mật khẩu",
-                isPassword = true
+                isPassword = true,
+                errorMessage = uiState.passwordError
             )
 
             WisebiteInputField(
@@ -131,14 +134,16 @@ fun SignupContent(
                 value = uiState.confirmPassword,
                 onValueChange = onConfirmPasswordChange,
                 placeholder = "Xác nhận mật khẩu của bạn",
-                isPassword = true
+                isPassword = true,
+                errorMessage = uiState.confirmPasswordError
             )
 
             WisebiteInputField(
                 label = "Địa chỉ (Tùy chọn)",
                 value = uiState.address,
                 onValueChange = onAddressChange,
-                placeholder = "Nhập địa chỉ của bạn"
+                placeholder = "Nhập địa chỉ của bạn",
+                errorMessage = uiState.addressError
             )
         }
 
@@ -185,6 +190,8 @@ fun SignupContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+        
+        Spacer(modifier = Modifier.weight(1f))
 
         // Login Navigation
         LoginNavigation(
@@ -214,7 +221,7 @@ fun SignupHeader() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Tham gia WiseBite hôm nay!",
+            text = "Tạo tài khoản",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -223,7 +230,7 @@ fun SignupHeader() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Giúp giảm lãng phí thực phẩm và tiết kiệm tiền",
+            text = "Tham gia cộng đồng giảm lãng phí thực phẩm",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

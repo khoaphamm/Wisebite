@@ -2,6 +2,7 @@ package com.example.wisebite.navigation
 
 // Navigation routes for the app
 object Routes {
+    const val AUTH_CHECK = "auth_check"
     const val LOGIN = "login"
     const val SIGNUP = "signup"
     const val HOME = "home"

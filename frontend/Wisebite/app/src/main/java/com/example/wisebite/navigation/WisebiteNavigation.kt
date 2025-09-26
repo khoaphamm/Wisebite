@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.wisebite.data.repository.AuthRepository
+import com.example.wisebite.ui.screen.AuthCheckScreen
 import com.example.wisebite.ui.screen.BagDetailsScreen
 import com.example.wisebite.ui.screen.HomeScreen
 import com.example.wisebite.ui.screen.LoginScreen
@@ -20,7 +21,7 @@ import com.example.wisebite.util.ViewModelFactory
 @Composable
 fun WisebiteNavigation(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Routes.LOGIN
+    startDestination: String = Routes.AUTH_CHECK
 ) {
     val context = LocalContext.current
     val authRepository = AuthRepository.getInstance(context)
@@ -29,6 +30,22 @@ fun WisebiteNavigation(
         navController = navController,
         startDestination = startDestination
     ) {
+        // Authentication Check Screen
+        composable(Routes.AUTH_CHECK) {
+            AuthCheckScreen(
+                onAuthenticated = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.AUTH_CHECK) { inclusive = true }
+                    }
+                },
+                onNotAuthenticated = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.AUTH_CHECK) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
         composable(Routes.LOGIN) {
             val viewModel: LoginViewModel = viewModel(
                 factory = ViewModelFactory.createLoginViewModelFactory(authRepository)

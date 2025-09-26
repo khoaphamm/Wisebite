@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from app.api.endpoints import auth, user, transaction, notification, chat, otp
 
 # Import our NEW routers
-from app.api.endpoints import store, food_item, surprise_bag, order
+from app.api.endpoints import store, food_item, surprise_bag, order, upload
 
 api_router = APIRouter()
 
@@ -21,3 +21,4 @@ api_router.include_router(store.router, prefix="/stores", tags=["Stores"])
 api_router.include_router(food_item.router, prefix="/food-items", tags=["Vendor Food Items"])
 api_router.include_router(surprise_bag.router, prefix="/surprise-bag", tags=["Surprise Bags"])
 api_router.include_router(order.router, prefix="/orders", tags=["Orders"])
+api_router.include_router(upload.router, prefix="/upload", tags=["File Upload"])

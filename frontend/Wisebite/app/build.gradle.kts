@@ -74,6 +74,9 @@ dependencies {
     // JSON parsing
     implementation("com.google.code.gson:gson:2.10.1")
     
+    // Image loading with Coil
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

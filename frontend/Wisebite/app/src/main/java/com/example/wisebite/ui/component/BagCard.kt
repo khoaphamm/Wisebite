@@ -1,8 +1,10 @@
 package com.example.wisebite.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,7 +13,7 @@ import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +40,9 @@ fun BagCard(
     bagInfo: BagInfo = BagInfo(),
     onOrderClick: () -> Unit = {}
 ) {
+    // State management for user selections
+    var selectedPickupMethod by remember { mutableStateOf("Giao hàng") }
+    var selectedPaymentMethod by remember { mutableStateOf("Thanh toán bằng ví MoMo") }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -195,32 +200,43 @@ fun BagCard(
             ) {
                 // Self pickup button
                 OutlinedButton(
-                    onClick = { },
+                    onClick = { selectedPickupMethod = "Tự đến lấy" },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = WarmGrey700
+                        contentColor = if (selectedPickupMethod == "Tự đến lấy") Green500 else WarmGrey700,
+                        containerColor = if (selectedPickupMethod == "Tự đến lấy") Green500.copy(alpha = 0.1f) else Color.Transparent
+                    ),
+                    border = BorderStroke(
+                        1.dp, 
+                        if (selectedPickupMethod == "Tự đến lấy") Green500 else WarmGrey400
                     )
                 ) {
                     Text(
                         text = "Tự đến lấy",
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        fontWeight = if (selectedPickupMethod == "Tự đến lấy") FontWeight.Medium else FontWeight.Normal
                     )
                 }
 
                 // Delivery button
-                Button(
-                    onClick = { },
+                OutlinedButton(
+                    onClick = { selectedPickupMethod = "Giao hàng" },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Green500,
-                        contentColor = Color.White
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (selectedPickupMethod == "Giao hàng") Green500 else WarmGrey700,
+                        containerColor = if (selectedPickupMethod == "Giao hàng") Green500.copy(alpha = 0.1f) else Color.Transparent
+                    ),
+                    border = BorderStroke(
+                        1.dp, 
+                        if (selectedPickupMethod == "Giao hàng") Green500 else WarmGrey400
                     )
                 ) {
                     Text(
                         text = "Giao hàng",
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        fontWeight = if (selectedPickupMethod == "Giao hàng") FontWeight.Medium else FontWeight.Normal
                     )
                 }
             }
@@ -244,17 +260,18 @@ fun BagCard(
             ) {
                 PaymentOptionRow(
                     text = "Thanh toán khi nhận hàng",
-                    isSelected = false
+                    isSelected = selectedPaymentMethod == "Thanh toán khi nhận hàng",
+                    onClick = { selectedPaymentMethod = "Thanh toán khi nhận hàng" }
                 )
                 PaymentOptionRow(
                     text = "Thanh toán bằng ngân hàng",
-                    isSelected = false,
-
+                    isSelected = selectedPaymentMethod == "Thanh toán bằng ngân hàng",
+                    onClick = { selectedPaymentMethod = "Thanh toán bằng ngân hàng" }
                 )
                 PaymentOptionRow(
                     text = "Thanh toán bằng ví MoMo",
-                    isSelected = true,
-
+                    isSelected = selectedPaymentMethod == "Thanh toán bằng ví MoMo",
+                    onClick = { selectedPaymentMethod = "Thanh toán bằng ví MoMo" }
                 )
             }
 
@@ -306,15 +323,18 @@ fun BagCard(
 private fun PaymentOptionRow(
     text: String,
     isSelected: Boolean,
+    onClick: () -> Unit,
     iconColor: Color? = null
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioButton(
             selected = isSelected,
-            onClick = { },
+            onClick = onClick,
             colors = RadioButtonDefaults.colors(
                 selectedColor = Green500,
                 unselectedColor = WarmGrey400

@@ -1,17 +1,13 @@
 package com.example.wisebite.ui.screen
 
-import androidx.compose.foundation.Image
+import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,10 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -31,6 +24,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wisebite.R
 import com.example.wisebite.data.repository.AuthRepository
+import com.example.wisebite.data.repository.ImageUploadRepository
+import com.example.wisebite.ui.component.ImagePicker
+import com.example.wisebite.ui.component.ImagePickerShape
+import com.example.wisebite.ui.component.ImagePickerSize
 import com.example.wisebite.ui.component.WisebiteInputField
 import com.example.wisebite.ui.theme.*
 import com.example.wisebite.ui.viewmodel.EditProfileViewModel
@@ -44,7 +41,7 @@ fun EditProfileScreen(
     val context = LocalContext.current
     val authRepository = AuthRepository.getInstance(context)
     val viewModel: EditProfileViewModel = viewModel(
-        factory = EditProfileViewModelFactory(authRepository)
+        factory = EditProfileViewModelFactory(authRepository, context)
     )
     
     val uiState by viewModel.uiState.collectAsState()
@@ -93,11 +90,43 @@ fun EditProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Profile Picture Section
-            ProfilePictureSection(
-                avatarUrl = uiState.user?.avatarUrl,
-                onEditPhoto = { /* TODO: Implement photo selection */ }
-            )
+            // Profile Picture Section with ImagePicker
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                ImagePicker(
+                    currentImageUrl = uiState.user?.avatarUrl,
+                    onImageSelected = { uri -> viewModel.uploadAvatar(uri) },
+                    shape = ImagePickerShape.Circle,
+                    size = ImagePickerSize.Large,
+                    showAddIcon = true,
+                    isLoading = uiState.isUploadingAvatar,
+                    defaultImageRes = R.drawable.man,
+                    modifier = Modifier.size(120.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = if (uiState.isUploadingAvatar) "Đang tải ảnh lên..." 
+                           else "Chạm để thay đổi ảnh đại diện",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+                
+                // Show upload success message
+                uiState.uploadSuccess?.let { message ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
             
             Spacer(modifier = Modifier.height(32.dp))
             
@@ -180,78 +209,5 @@ fun EditProfileScreen(
             
             Spacer(modifier = Modifier.height(32.dp))
         }
-    }
-}
-
-@Composable
-fun ProfilePictureSection(
-    avatarUrl: String?,
-    onEditPhoto: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier.size(120.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // Profile Picture
-            if (avatarUrl != null && avatarUrl.isNotEmpty()) {
-                // TODO: Load actual image from URL using Coil or similar
-                Image(
-                    painter = painterResource(id = R.drawable.man),
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                )
-            } else {
-                // Placeholder when no avatar
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Default Avatar",
-                        modifier = Modifier.size(60.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            // Edit Photo Button
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .size(40.dp)
-                    .clickable { onEditPhoto() },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                shadowElevation = 4.dp
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "Edit Photo",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = "Chạm để thay đổi ảnh đại diện",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center
-        )
     }
 }

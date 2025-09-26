@@ -26,18 +26,7 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             WisebiteTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        WisebiteNavigation()
-                    }
-                }
+                WisebiteNavigation()
             }
         }
     }

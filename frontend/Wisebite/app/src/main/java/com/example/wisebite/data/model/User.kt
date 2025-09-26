@@ -116,5 +116,6 @@ data class SignupUiState(
     val emailError: String? = null,
     val phoneNumberError: String? = null,
     val passwordError: String? = null,
-    val confirmPasswordError: String? = null
+    val confirmPasswordError: String? = null,
+    val addressError: String? = null
 )

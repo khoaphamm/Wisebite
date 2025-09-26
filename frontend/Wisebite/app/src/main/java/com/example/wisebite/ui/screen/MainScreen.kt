@@ -1,10 +1,13 @@
 package com.example.wisebite.ui.screen
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -24,10 +27,12 @@ fun MainScreen(
     val navController = rememberNavController()
     
     Scaffold(
+        modifier = Modifier.statusBarsPadding(),
         bottomBar = {
             NavigationBar(
                 containerColor = Color.White,
-                contentColor = Green500
+                contentColor = Green500,
+                modifier = Modifier.height(70.dp)
             ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
@@ -54,17 +59,10 @@ fun MainScreen(
                                 contentDescription = item.title
                             )
                         },
-                        label = {
-                            Text(
-                                text = item.title,
-                                color = if (isSelected) Green500 else WarmGrey600
-                            )
-                        },
+                        label = null,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = Green500,
                             unselectedIconColor = WarmGrey600,
-                            selectedTextColor = Green500,
-                            unselectedTextColor = WarmGrey600,
                             indicatorColor = Green100
                         )
                     )

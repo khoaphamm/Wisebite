@@ -26,6 +26,9 @@ class SignupViewModel(
             fullNameError = null,
             errorMessage = null
         )
+        
+        // Real-time validation
+        validateFullNameField(fullName)
     }
     
     fun updateEmail(email: String) {
@@ -34,6 +37,9 @@ class SignupViewModel(
             emailError = null,
             errorMessage = null
         )
+        
+        // Real-time validation
+        validateEmailField(email)
     }
     
     fun updatePhoneNumber(phoneNumber: String) {
@@ -42,6 +48,9 @@ class SignupViewModel(
             phoneNumberError = null,
             errorMessage = null
         )
+        
+        // Real-time validation for phone
+        validatePhoneField(phoneNumber)
     }
     
     fun updateCountry(country: CountryCode) {
@@ -50,6 +59,9 @@ class SignupViewModel(
             phoneNumberError = null,
             errorMessage = null
         )
+        
+        // Re-validate phone with new country
+        validatePhoneField(_uiState.value.phoneNumber)
     }
     
     fun updatePassword(password: String) {
@@ -58,6 +70,9 @@ class SignupViewModel(
             passwordError = null,
             errorMessage = null
         )
+        
+        // Real-time validation
+        validatePasswordField(password)
     }
     
     fun updateConfirmPassword(confirmPassword: String) {
@@ -66,6 +81,9 @@ class SignupViewModel(
             confirmPasswordError = null,
             errorMessage = null
         )
+        
+        // Real-time validation
+        validateConfirmPasswordField(confirmPassword)
     }
     
     fun updateAddress(address: String) {
@@ -107,13 +125,13 @@ class SignupViewModel(
                 } else {
                     _uiState.value = currentState.copy(
                         isLoading = false,
-                        errorMessage = result.exceptionOrNull()?.message ?: "Signup failed"
+                        errorMessage = result.exceptionOrNull()?.message ?: "Đăng ký thất bại. Vui lòng thử lại."
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = currentState.copy(
                     isLoading = false,
-                    errorMessage = "Network error. Please check your connection."
+                    errorMessage = "Lỗi mạng. Vui lòng kiểm tra kết nối internet."
                 )
             }
         }
@@ -125,50 +143,108 @@ class SignupViewModel(
         
         // Validate full name
         if (state.fullName.isBlank()) {
-            updatedState = updatedState.copy(fullNameError = "Please enter your full name")
+            updatedState = updatedState.copy(fullNameError = "Vui lòng nhập họ và tên")
             isValid = false
         } else if (state.fullName.length < 2) {
-            updatedState = updatedState.copy(fullNameError = "Name must be at least 2 characters")
+            updatedState = updatedState.copy(fullNameError = "Họ và tên phải có ít nhất 2 ký tự")
+            isValid = false
+        } else if (state.fullName.length > 100) {
+            updatedState = updatedState.copy(fullNameError = "Họ và tên không được quá 100 ký tự")
             isValid = false
         }
         
         // Validate email
         if (state.email.isBlank()) {
-            updatedState = updatedState.copy(emailError = "Please enter your email")
+            updatedState = updatedState.copy(emailError = "Vui lòng nhập địa chỉ email")
             isValid = false
         } else if (!isValidEmail(state.email)) {
-            updatedState = updatedState.copy(emailError = "Please enter a valid email address")
+            updatedState = updatedState.copy(emailError = "Vui lòng nhập địa chỉ email hợp lệ")
             isValid = false
         }
         
         // Validate phone number
         if (state.phoneNumber.isBlank()) {
-            updatedState = updatedState.copy(phoneNumberError = "Please enter your phone number")
+            updatedState = updatedState.copy(phoneNumberError = "Vui lòng nhập số điện thoại")
             isValid = false
         } else if (!isValidPhoneNumber(state.phoneNumber)) {
-            updatedState = updatedState.copy(phoneNumberError = "Please enter a valid phone number")
+            updatedState = updatedState.copy(phoneNumberError = "Vui lòng nhập số điện thoại hợp lệ")
             isValid = false
         }
         
         // Validate password
         if (state.password.isBlank()) {
-            updatedState = updatedState.copy(passwordError = "Please enter a password")
+            updatedState = updatedState.copy(passwordError = "Vui lòng nhập mật khẩu")
             isValid = false
         } else if (state.password.length < 6) {
-            updatedState = updatedState.copy(passwordError = "Password must be at least 6 characters")
+            updatedState = updatedState.copy(passwordError = "Mật khẩu phải có ít nhất 6 ký tự")
+            isValid = false
+        } else if (state.password.length > 50) {
+            updatedState = updatedState.copy(passwordError = "Mật khẩu không được quá 50 ký tự")
             isValid = false
         }
         
         // Validate confirm password
         if (state.confirmPassword.isBlank()) {
-            updatedState = updatedState.copy(confirmPasswordError = "Please confirm your password")
+            updatedState = updatedState.copy(confirmPasswordError = "Vui lòng xác nhận mật khẩu")
             isValid = false
         } else if (state.password != state.confirmPassword) {
-            updatedState = updatedState.copy(confirmPasswordError = "Passwords do not match")
+            updatedState = updatedState.copy(confirmPasswordError = "Mật khẩu xác nhận không khớp")
             isValid = false
         }
         
         return ValidationResult(isValid, updatedState)
+    }
+    
+    // Individual field validation functions for real-time feedback
+    private fun validateFullNameField(fullName: String) {
+        if (fullName.isBlank()) return // Don't show error for empty field while typing
+        
+        when {
+            fullName.length < 2 -> {
+                _uiState.value = _uiState.value.copy(fullNameError = "Họ và tên phải có ít nhất 2 ký tự")
+            }
+            fullName.length > 100 -> {
+                _uiState.value = _uiState.value.copy(fullNameError = "Họ và tên không được quá 100 ký tự")
+            }
+        }
+    }
+    
+    private fun validateEmailField(email: String) {
+        if (email.isBlank()) return // Don't show error for empty field while typing
+        
+        if (!isValidEmail(email)) {
+            _uiState.value = _uiState.value.copy(emailError = "Vui lòng nhập địa chỉ email hợp lệ")
+        }
+    }
+    
+    private fun validatePhoneField(phoneNumber: String) {
+        if (phoneNumber.isBlank()) return // Don't show error for empty field while typing
+        
+        if (!isValidPhoneNumber(phoneNumber)) {
+            _uiState.value = _uiState.value.copy(phoneNumberError = "Vui lòng nhập số điện thoại hợp lệ")
+        }
+    }
+    
+    private fun validatePasswordField(password: String) {
+        if (password.isBlank()) return // Don't show error for empty field while typing
+        
+        when {
+            password.length < 6 -> {
+                _uiState.value = _uiState.value.copy(passwordError = "Mật khẩu phải có ít nhất 6 ký tự")
+            }
+            password.length > 50 -> {
+                _uiState.value = _uiState.value.copy(passwordError = "Mật khẩu không được quá 50 ký tự")
+            }
+        }
+    }
+    
+    private fun validateConfirmPasswordField(confirmPassword: String) {
+        if (confirmPassword.isBlank()) return // Don't show error for empty field while typing
+        
+        val currentPassword = _uiState.value.password
+        if (currentPassword.isNotBlank() && confirmPassword != currentPassword) {
+            _uiState.value = _uiState.value.copy(confirmPasswordError = "Mật khẩu xác nhận không khớp")
+        }
     }
     
     private fun isValidEmail(email: String): Boolean {
