@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.wisebite.ui.component.WisebiteHeader
 import com.example.wisebite.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,78 +38,12 @@ fun HomeScreen(
             .background(color = MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
     ) {
-        // Header with location
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                // App title and location
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "WISE",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    Text(
-                        text = "BITE",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Green500
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "Chào mừng đến với WiseBite!",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                Text(
-                    text = "Save the food up 🌱",
-                    fontSize = 14.sp,
-                    color = WarmGrey600,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        tint = WarmGrey600,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "TP. Hồ Chí Minh",
-                        fontSize = 14.sp,
-                        color = WarmGrey600
-                    )
-                }
-            }
-        }
+        // Consistent header
+        WisebiteHeader(
+            title = "Chào mừng đến với WiseBite!",
+            subtitle = "Save the food up 🌱 • TP. Hồ Chí Minh",
+            showWiseBiteLogo = true
+        )
         
         // Promotional banner
         Card(

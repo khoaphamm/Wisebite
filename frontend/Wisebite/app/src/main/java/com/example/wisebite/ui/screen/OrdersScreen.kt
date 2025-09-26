@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.wisebite.ui.component.SimpleHeader
+import com.example.wisebite.ui.component.WisebiteHeader
 import com.example.wisebite.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,21 +27,8 @@ fun OrdersScreen() {
             .fillMaxSize()
             .background(color = MaterialTheme.colorScheme.background)
     ) {
-        // Top App Bar
-        TopAppBar(
-            title = {
-                Text(
-                    text = "My Orders",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Green700,
-                    fontSize = 24.sp
-                )
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
-            )
-        )
+        // Simple header like in the image
+        SimpleHeader(title = "Hoạt động")
 
         // Empty state for now
         Column(

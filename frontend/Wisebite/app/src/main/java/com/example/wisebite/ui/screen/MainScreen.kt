@@ -90,7 +90,18 @@ fun MainScreen(
             
             composable(Routes.PROFILE) {
                 ProfileScreen(
-                    onLogout = onLogout
+                    onLogout = onLogout,
+                    onNavigateToEditProfile = {
+                        navController.navigate(Routes.EDIT_PROFILE)
+                    }
+                )
+            }
+            
+            composable(Routes.EDIT_PROFILE) {
+                EditProfileScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
                 )
             }
         }

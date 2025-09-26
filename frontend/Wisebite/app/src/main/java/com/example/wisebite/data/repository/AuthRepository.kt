@@ -5,6 +5,7 @@ import com.example.wisebite.data.model.LoginRequest
 import com.example.wisebite.data.model.LoginResponse
 import com.example.wisebite.data.model.SignupRequest
 import com.example.wisebite.data.model.User
+import com.example.wisebite.data.model.UserUpdateRequest
 import com.example.wisebite.data.remote.RetrofitClient
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
@@ -142,6 +143,46 @@ class AuthRepository private constructor(
                     }
                 } else {
                     Result.failure(Exception("Failed to get user data"))
+                }
+            } else {
+                Result.failure(Exception("No auth token available"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error. Please check your connection."))
+        }
+    }
+    
+    suspend fun updateUserProfile(
+        fullName: String,
+        email: String,
+        phoneNumber: String
+    ): Result<User> {
+        return try {
+            val authHeader = tokenManager.getAuthHeader().first()
+            if (authHeader != null) {
+                val updateRequest = UserUpdateRequest(
+                    fullName = fullName,
+                    email = email,
+                    phoneNumber = phoneNumber
+                )
+                
+                val response = RetrofitClient.apiService.updateCurrentUser(authHeader, updateRequest)
+                if (response.isSuccessful) {
+                    val user = response.body()
+                    if (user != null) {
+                        // Update stored user data
+                        tokenManager.saveUserJson(gson.toJson(user))
+                        Result.success(user)
+                    } else {
+                        Result.failure(Exception("Updated user data is null"))
+                    }
+                } else {
+                    val errorMessage = when (response.code()) {
+                        400 -> "Email or phone number already exists"
+                        422 -> "Please check your input and try again"
+                        else -> "Failed to update profile. Please try again."
+                    }
+                    Result.failure(Exception(errorMessage))
                 }
             } else {
                 Result.failure(Exception("No auth token available"))

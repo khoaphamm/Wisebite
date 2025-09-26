@@ -1,6 +1,7 @@
 package com.example.wisebite.data.model
 
 import com.google.gson.annotations.SerializedName
+
 import com.example.wisebite.ui.component.CountryCode
 import java.util.Date
 
@@ -17,14 +18,11 @@ data class User(
     @SerializedName("phone_number")
     val phoneNumber: String,
     
-    @SerializedName("user_type")
-    val userType: String, // "customer" or "vendor"
+    @SerializedName("role")
+    val role: String, // "customer" or "vendor" - matches backend UserRole enum
     
-    @SerializedName("address")
-    val address: String?,
-    
-    @SerializedName("coordinates")
-    val coordinates: List<Double>?, // [latitude, longitude]
+    @SerializedName("avt_url") 
+    val avatarUrl: String?,
     
     @SerializedName("created_at")
     val createdAt: String
@@ -53,6 +51,17 @@ data class SignupRequest(
     
     @SerializedName("role")
     val role: String = "customer" // Backend expects "role" not "user_type"
+)
+
+data class UserUpdateRequest(
+    @SerializedName("full_name")
+    val fullName: String,
+    
+    @SerializedName("email")
+    val email: String,
+    
+    @SerializedName("phone_number")
+    val phoneNumber: String
 )
 
 data class LoginResponse(
@@ -89,7 +98,6 @@ data class LoginUiState(
     val errorMessage: String? = null,
     val isPasswordVisible: Boolean = false
 )
-
 
 
 data class SignupUiState(

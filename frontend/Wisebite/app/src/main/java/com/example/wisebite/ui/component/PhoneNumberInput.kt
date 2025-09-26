@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -54,84 +55,99 @@ fun PhoneNumberInput(
         CountryCode("South Korea", "KR", "🇰🇷", "+82")
     )
     
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = label,
+            style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
+        )
+        
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Country Code Selector
-            Card(
+            // Country Code Picker - matching the SignupScreen style
+            Row(
                 modifier = Modifier
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
                     .clickable { showCountryPicker = true }
-                    .padding(end = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = selectedCountry.flag,
-                        fontSize = 18.sp
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = selectedCountry.dialCode,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Select country",
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-            
-            // Phone Number Input
-            Column(modifier = Modifier.weight(1f)) {
-                OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = onPhoneNumberChange,
-                    label = { Text(label) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessage != null,
-                    singleLine = true,
-                    placeholder = { 
-                        Text(
-                            text = when (selectedCountry.code) {
-                                "VN" -> "369833705"
-                                "US", "CA" -> "555-0123"
-                                "GB" -> "7700 900123"
-                                "SG" -> "8123 4567"
-                                else -> "123456789"
-                            }
-                        ) 
-                    }
+                Text(text = selectedCountry.flag, fontSize = 20.sp)
+                Text(
+                    text = selectedCountry.dialCode, 
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
                 )
-                
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage,
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Thay đổi mã quốc gia",
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
+
+            // Phone Number Field - matching the WisebiteInputField style
+            OutlinedTextField(
+                value = phoneNumber,
+                onValueChange = onPhoneNumberChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { 
+                    Text(
+                        text = when (selectedCountry.code) {
+                            "VN" -> "369833705"
+                            "US", "CA" -> "555-0123"
+                            "GB" -> "7700 900123"
+                            "SG" -> "8123 4567"
+                            else -> "123456789"
+                        },
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                },
+                shape = RoundedCornerShape(16.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                isError = errorMessage != null,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedBorderColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    cursorColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    focusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
+                    errorBorderColor = androidx.compose.material3.MaterialTheme.colorScheme.error
+                )
+            )
+        }
+        
+        // Error message
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp)
+            )
         }
         
         // Show full formatted number
         if (phoneNumber.isNotEmpty()) {
             Text(
-                text = "Full number: ${selectedCountry.dialCode}${phoneNumber}",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, start = 16.dp)
+                text = "Số đầy đủ: ${selectedCountry.dialCode}${phoneNumber}",
+                fontSize = 11.sp,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
             )
         }
     }
@@ -142,15 +158,22 @@ fun PhoneNumberInput(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 400.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .heightIn(max = 500.dp)
+                    .clip(RoundedCornerShape(20.dp)),
+                colors = CardDefaults.cardColors(
+                    containerColor = androidx.compose.ui.graphics.Color.White
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
                     Text(
-                        text = "Select Country",
-                        fontSize = 18.sp,
+                        text = "Chọn quốc gia",
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(16.dp)
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
                     
                     LazyColumn {
@@ -162,25 +185,35 @@ fun PhoneNumberInput(
                                         onCountryChange(country)
                                         showCountryPicker = false
                                     }
-                                    .padding(16.dp),
+                                    .padding(vertical = 12.dp, horizontal = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = country.flag,
-                                    fontSize = 20.sp,
-                                    modifier = Modifier.padding(end = 12.dp)
+                                    fontSize = 24.sp,
+                                    modifier = Modifier.padding(end = 16.dp)
                                 )
                                 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = country.name,
                                         fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.Medium,
+                                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = country.dialCode,
                                         fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                
+                                if (selectedCountry.code == country.code) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.Check,
+                                        contentDescription = "Đã chọn",
+                                        tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
