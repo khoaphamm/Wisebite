@@ -24,6 +24,7 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, max_length=100, index=True)
     role: UserRole = Field(default=UserRole.CUSTOMER)
     avt_url: Optional[str] = Field(default=None)
+    is_google_user: bool = Field(default=False)  # Track if user has Google account linked
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now, sa_column_kwargs={"onupdate": func.now()})
 
@@ -33,6 +34,18 @@ class User(SQLModel, table=True):
     reviews: List["Review"] = Relationship(back_populates="user")
     notifications: list["Noti_User"] = Relationship(back_populates="recipient", cascade_delete=True)
     conversations: List["ConversationMember"] = Relationship(back_populates="user", cascade_delete=True)
+
+
+# --- Password Reset Model (NEW) ---
+
+class PasswordReset(SQLModel, table=True):
+    """Store password reset codes with expiration"""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    email: str = Field(max_length=100, index=True)
+    reset_code: str = Field(max_length=6)
+    expires_at: datetime
+    used: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 # --- 2. Vendor-Specific Information (NEW) ---

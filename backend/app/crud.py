@@ -1,7 +1,8 @@
 import uuid
 import httpx
 from typing import Optional, List
-from sqlmodel import Session, select
+from datetime import datetime
+from sqlmodel import Session, select, delete
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy import or_, func, text
 from sqlalchemy.sql import func as sqla_func
@@ -141,6 +142,20 @@ def get_user_by_id(session: Session, user_id: uuid.UUID) -> Optional[User]:
 
 def authenticate(session: Session, phone_number: str, password: str) -> Optional[User]:
     db_user = get_user_by_phone_number(session=session, phone_number=phone_number)
+    if not db_user:
+        return None
+    if not verify_password(password, db_user.hashed_password):
+        return None
+    return db_user
+
+def authenticate_flexible(session: Session, identifier: str, password: str) -> Optional[User]:
+    """Authenticate user by phone number OR email"""
+    # Try phone number first
+    db_user = get_user_by_phone_number(session=session, phone_number=identifier)
+    if not db_user:
+        # Try email if phone number doesn't work
+        db_user = get_user_by_email(session=session, email=identifier)
+    
     if not db_user:
         return None
     if not verify_password(password, db_user.hashed_password):
@@ -995,3 +1010,55 @@ def get_user_conversations(session: Session, user_id: uuid.UUID) -> list[Convers
 def get_messages_by_conversation(session: Session, conversation_id: uuid.UUID) -> list[Message]:
     statement = select(Message).where(Message.conversation_id == conversation_id).order_by(Message.created_at.asc())
     return session.exec(statement).all()
+
+
+# --- Password Reset CRUD Functions ---
+
+def store_reset_code(session: Session, email: str, reset_code: str, expires_at: datetime) -> None:
+    """Store a password reset code for an email"""
+    from app.models import PasswordReset
+    
+    # Delete any existing reset codes for this email
+    statement = delete(PasswordReset).where(PasswordReset.email == email)
+    session.exec(statement)
+    
+    # Create new reset code
+    password_reset = PasswordReset(
+        email=email,
+        reset_code=reset_code,
+        expires_at=expires_at
+    )
+    session.add(password_reset)
+    session.commit()
+
+def verify_reset_code(session: Session, email: str, reset_code: str) -> Optional[User]:
+    """Verify reset code and return user if valid"""
+    from app.models import PasswordReset
+    
+    # Find valid reset code
+    statement = select(PasswordReset).where(
+        PasswordReset.email == email,
+        PasswordReset.reset_code == reset_code,
+        PasswordReset.used == False,
+        PasswordReset.expires_at > datetime.now()
+    )
+    password_reset = session.exec(statement).first()
+    
+    if not password_reset:
+        return None
+    
+    # Mark reset code as used
+    password_reset.used = True
+    session.add(password_reset)
+    session.commit()
+    
+    # Return the user
+    return get_user_by_email(session=session, email=email)
+
+def update_user_password(session: Session, user: User, new_password: str) -> User:
+    """Update user password"""
+    user.hashed_password = get_password_hash(new_password)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user

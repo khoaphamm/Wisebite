@@ -1,7 +1,11 @@
 package com.example.wisebite.data.remote
 
+import com.example.wisebite.data.model.ForgotPasswordRequest
+import com.example.wisebite.data.model.GoogleSignInRequest
 import com.example.wisebite.data.model.LoginRequest
 import com.example.wisebite.data.model.LoginResponse
+import com.example.wisebite.data.model.MessageResponse
+import com.example.wisebite.data.model.ResetPasswordRequest
 import com.example.wisebite.data.model.SignupRequest
 import com.example.wisebite.data.model.User
 import com.example.wisebite.data.model.UserUpdateRequest
@@ -32,6 +36,9 @@ interface WisebiteApiService {
     @POST("auth/signup")
     suspend fun signup(@Body signupRequest: SignupRequest): Response<User>
     
+    @POST("auth/google-signin")
+    suspend fun signInWithGoogle(@Body request: GoogleSignInRequest): Response<LoginResponse>
+    
     @GET("user/me")
     suspend fun getCurrentUser(@Header("Authorization") token: String): Response<User>
     
@@ -40,6 +47,12 @@ interface WisebiteApiService {
         @Header("Authorization") token: String,
         @Body updateRequest: UserUpdateRequest
     ): Response<User>
+    
+    @POST("auth/forgot-password")
+    suspend fun requestPasswordReset(@Body request: ForgotPasswordRequest): Response<MessageResponse>
+    
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<MessageResponse>
     
     // Image Upload Endpoints
     @Multipart

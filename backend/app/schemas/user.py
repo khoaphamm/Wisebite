@@ -19,6 +19,7 @@ class UserPublic(UserBase):
     id: uuid.UUID
     role: UserRole
     avt_url: str | None = None  # Allow None for avatar URL
+    is_google_user: bool = False  # Track Google account linking
     store: Optional[StorePublic] = None # NEW: Add store info for vendors
 
 class UsersPublic(SQLModel):
@@ -31,7 +32,8 @@ class UserCreate(UserBase):
     # ADAPTED: Role is now required during creation for clarity
     role: UserRole 
     password: str
-    avt_url: str = Field(default=settings.DEFAULT_AVATAR_URL)
+    avt_url: str = Field(default=settings.DEFAULT_AVATAR_URL)  # Match database field name
+    is_google_user: bool = Field(default=False)  # NEW: Track Google OAuth users
 
 # KEPT: The following classes from the original file are essential and are preserved
 class UserRegister(SQLModel):
@@ -53,6 +55,7 @@ class UserUpdate(UserBase):
     full_name: str | None = Field(default=None)
     role: UserRole | None = Field(default=None)
     avt_url: str | None = Field(default=None)
+    is_google_user: bool | None = Field(default=None)
 
 class UserUpdateMe(UserBase):
     email: EmailStr | None = Field(default=None)

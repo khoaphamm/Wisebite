@@ -1,16 +1,19 @@
 package com.example.wisebite.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.wisebite.data.model.LoginUiState
 import com.example.wisebite.data.repository.AuthRepository
+import com.example.wisebite.service.GoogleSignInService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val context: Context
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -18,6 +21,8 @@ class LoginViewModel(
     
     private val _isLoginSuccessful = MutableStateFlow(false)
     val isLoginSuccessful: StateFlow<Boolean> = _isLoginSuccessful.asStateFlow()
+    
+    private val googleSignInService = GoogleSignInService(context)
     
     fun updatePhoneNumber(phoneNumber: String) {
         _uiState.value = _uiState.value.copy(phoneNumber = phoneNumber, errorMessage = null)
@@ -76,6 +81,42 @@ class LoginViewModel(
     private fun isValidPhoneNumber(phoneNumber: String): Boolean {
         // Basic phone number validation - adjust according to your requirements
         return phoneNumber.matches(Regex("^[+]?[0-9]{10,15}$"))
+    }
+    
+    fun signInWithGoogle() {
+        val currentState = _uiState.value
+        _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
+        
+        viewModelScope.launch {
+            try {
+                val googleResult = googleSignInService.signIn()
+                
+                if (googleResult.success && googleResult.idToken != null) {
+                    // Send Google ID token to backend
+                    val result = authRepository.signInWithGoogle(googleResult.idToken)
+                    
+                    if (result.isSuccess) {
+                        _uiState.value = currentState.copy(isLoading = false)
+                        _isLoginSuccessful.value = true
+                    } else {
+                        _uiState.value = currentState.copy(
+                            isLoading = false,
+                            errorMessage = result.exceptionOrNull()?.message ?: "Đăng nhập Google thất bại"
+                        )
+                    }
+                } else {
+                    _uiState.value = currentState.copy(
+                        isLoading = false,
+                        errorMessage = googleResult.errorMessage ?: "Đăng nhập Google thất bại"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = currentState.copy(
+                    isLoading = false,
+                    errorMessage = "Lỗi kết nối. Vui lòng thử lại."
+                )
+            }
+        }
     }
     
     private fun formatPhoneNumber(phoneNumber: String): String {

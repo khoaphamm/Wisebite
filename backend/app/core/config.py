@@ -60,8 +60,13 @@ class Settings(BaseSettings):
     MAPBOX_ACCESS_TOKEN: str = "your_mapbox_access_token"
     
     DEFAULT_AVATAR_URL: str = "https://i.ibb.co/5xt2NvW0/453178253-471506465671661-2781666950760530985-n.png"
+    
+    # --- 6. Google OAuth Settings (NEW) ---
+    # Temporarily hard-coded for testing - should use environment variables in production
+    GOOGLE_CLIENT_ID: str = "1066643707737-l8mkrv7beu7k19hnn23reqnqh936k5b3.apps.googleusercontent.com"
+    GOOGLE_CLIENT_SECRET: str = "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"
 
-    # --- 6. Redis Settings (UNCHANGED, for future use) ---
+    # --- 7. Redis Settings (UNCHANGED, for future use) ---
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
@@ -70,8 +75,12 @@ class Settings(BaseSettings):
     # For sending password resets, etc.
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
+    SMTP_TLS: bool = True
+    SMTP_SSL: bool = False
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     EMAILS_FROM_EMAIL: EmailStr | None = None
+    EMAILS_FROM_NAME: str = "WiseBite"
+    EMAIL_TOKEN_EXPIRE_HOURS: int = 24
 
 settings = Settings()

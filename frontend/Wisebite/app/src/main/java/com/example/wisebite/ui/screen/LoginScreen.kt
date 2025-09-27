@@ -60,7 +60,8 @@ import com.example.wisebite.ui.component.WisebiteInputField
 fun LoginScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: () -> Unit,
-    onNavigateToSignup: () -> Unit
+    onNavigateToSignup: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isLoginSuccessful by viewModel.isLoginSuccessful.collectAsState()
@@ -116,7 +117,7 @@ fun LoginScreen(
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .align(Alignment.End)
-                    .clickable { /* TODO: Implement forgot password */ }
+                    .clickable { onNavigateToForgotPassword() }
                     .padding(vertical = 4.dp)
             )
         }
@@ -169,7 +170,10 @@ fun LoginScreen(
         
         Spacer(modifier = Modifier.height(14.dp))
         
-        SocialLoginButtons()
+        SocialLoginButtons(
+            onGoogleSignIn = viewModel::signInWithGoogle,
+            isLoading = uiState.isLoading
+        )
         
         Spacer(modifier = Modifier.weight(1f))
         
@@ -244,27 +248,37 @@ fun OrDivider() {
 }
 
 @Composable
-fun SocialLoginButtons() {
+fun SocialLoginButtons(
+    onGoogleSignIn: () -> Unit = {},
+    isLoading: Boolean = false
+) {
     Row(
         horizontalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxWidth()
     ) {
         SocialLoginButton(
             text = "Google",
-            onClick = { /* TODO: Implement Google login */ }
+            onClick = onGoogleSignIn,
+            isLoading = isLoading
         )
         Spacer(modifier = Modifier.width(18.dp))
         SocialLoginButton(
             text = "Facebook",
-            onClick = { /* TODO: Implement Facebook login */ }
+            onClick = { /* TODO: Implement Facebook login */ },
+            isLoading = false
         )
     }
 }
 
 @Composable
-fun SocialLoginButton(text: String, onClick: () -> Unit) {
+fun SocialLoginButton(
+    text: String, 
+    onClick: () -> Unit,
+    isLoading: Boolean = false
+) {
     OutlinedButton(
         onClick = onClick,
+        enabled = !isLoading,
         modifier = Modifier.width(120.dp),
         shape = RoundedCornerShape(16.dp),
         contentPadding = PaddingValues(vertical = 12.dp),
@@ -274,11 +288,19 @@ fun SocialLoginButton(text: String, onClick: () -> Unit) {
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     ) {
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
+        if (isLoading && text == "Google") {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else {
+            Text(
+                text = text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
