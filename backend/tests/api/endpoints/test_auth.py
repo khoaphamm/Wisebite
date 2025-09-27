@@ -131,7 +131,7 @@ def test_login_invalid_phone(client: TestClient):
         data=login_data,
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
-    assert_response_error(response, 401, "incorrect phone number or password")
+    assert_response_error(response, 401, "incorrect credentials")
 
 
 @pytest.mark.integration
@@ -153,7 +153,7 @@ def test_login_invalid_password(client: TestClient):
         data=login_data,
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
-    assert_response_error(response, 401, "incorrect phone number or password")
+    assert_response_error(response, 401, "incorrect credentials")
 
 
 @pytest.mark.integration
