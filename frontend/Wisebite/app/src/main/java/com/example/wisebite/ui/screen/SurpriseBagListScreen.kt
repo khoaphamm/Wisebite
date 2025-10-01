@@ -24,10 +24,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wisebite.data.model.SurpriseBag
+import com.example.wisebite.data.repository.ApiResult
 import com.example.wisebite.data.repository.SurpriseBagRepository
 import com.example.wisebite.ui.theme.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class SurpriseBagListUiState(
     val isLoading: Boolean = false,
@@ -41,7 +48,7 @@ data class SurpriseBagListUiState(
 
 class SurpriseBagListViewModel(
     private val repository: SurpriseBagRepository
-) : androidx.lifecycle.ViewModel() {
+) : ViewModel() {
     
     private val _uiState = MutableStateFlow(SurpriseBagListUiState())
     val uiState: StateFlow<SurpriseBagListUiState> = _uiState.asStateFlow()
@@ -51,24 +58,36 @@ class SurpriseBagListViewModel(
     }
     
     fun loadData() {
-        androidx.lifecycle.viewModelScope.launch {
+        viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
+            android.util.Log.d("SurpriseBagListViewModel", "Loading surprise bags data...")
             val categoriesResult = repository.getAvailableCategories()
             val bagsResult = repository.getAllSurpriseBags(
                 category = if (_uiState.value.selectedCategory == "Tất cả") null else _uiState.value.selectedCategory,
-                city = _uiState.value.selectedCity,
+                city = null, // Remove city filter temporarily
                 maxPrice = _uiState.value.maxPrice
             )
             
+            android.util.Log.d("SurpriseBagListViewModel", "Categories result: $categoriesResult")
+            android.util.Log.d("SurpriseBagListViewModel", "Bags result: $bagsResult")
+            
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                categories = if (categoriesResult is com.example.wisebite.data.repository.ApiResult.Success) 
+                categories = if (categoriesResult is ApiResult.Success) 
                     listOf("Tất cả") + categoriesResult.data else 
                     listOf("Tất cả", "Combo", "Thịt/Cá", "Rau/Củ", "Trái cây", "Bánh mì"),
-                surpriseBags = if (bagsResult is com.example.wisebite.data.repository.ApiResult.Success) 
-                    bagsResult.data else emptyList(),
-                errorMessage = if (bagsResult is com.example.wisebite.data.repository.ApiResult.Error) 
+                surpriseBags = if (bagsResult is ApiResult.Success) {
+                    android.util.Log.d("SurpriseBagListViewModel", "Successfully loaded ${bagsResult.data.size} surprise bags")
+                    bagsResult.data.forEach { bag ->
+                        android.util.Log.d("SurpriseBagListViewModel", "Bag: ${bag.name} - ${bag.originalValue} -> ${bag.discountedPrice}")
+                    }
+                    bagsResult.data
+                } else {
+                    android.util.Log.e("SurpriseBagListViewModel", "Failed to load surprise bags: $bagsResult")
+                    emptyList()
+                },
+                errorMessage = if (bagsResult is ApiResult.Error) 
                     bagsResult.message else null
             )
         }
@@ -196,19 +215,28 @@ fun SurpriseBagListScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { viewModel.loadData() }
                     ) {
                         Text(
-                            text = "Không có Surprise Bag nào",
+                            text = if (uiState.errorMessage != null) {
+                                "Lỗi tải dữ liệu: ${uiState.errorMessage}"
+                            } else {
+                                "Không có Surprise Bag nào"
+                            },
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Medium,
-                            color = WarmGrey600
+                            color = if (uiState.errorMessage != null) Red500 else WarmGrey600
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Hãy thử tìm kiếm với bộ lọc khác",
+                            text = if (uiState.errorMessage != null) {
+                                "Nhấn để thử lại"
+                            } else {
+                                "Hãy thử tìm kiếm với bộ lọc khác"
+                            },
                             fontSize = 14.sp,
-                            color = WarmGrey500
+                            color = if (uiState.errorMessage != null) Green500 else WarmGrey500
                         )
                     }
                 }
@@ -219,7 +247,10 @@ fun SurpriseBagListScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.surpriseBags) { bag ->
+                    items(
+                        items = uiState.surpriseBags,
+                        key = { bag -> bag.id }
+                    ) { bag ->
                         SurpriseBagListItem(
                             bag = bag,
                             onClick = { onBagClick(bag.id) }

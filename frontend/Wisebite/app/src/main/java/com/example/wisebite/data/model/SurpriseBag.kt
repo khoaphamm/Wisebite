@@ -127,35 +127,3 @@ data class FoodItem(
     @SerializedName("store")
     val store: Store?
 )
-
-data class Store(
-    @SerializedName("id")
-    val id: String,
-    
-    @SerializedName("name")
-    val name: String,
-    
-    @SerializedName("address")
-    val address: String,
-    
-    @SerializedName("city")
-    val city: String? = null,
-    
-    @SerializedName("description")
-    val description: String?,
-    
-    @SerializedName("logo_url")
-    val logoUrl: String?,
-    
-    @SerializedName("phone")
-    val phone: String? = null,
-    
-    @SerializedName("rating")
-    val rating: Double? = null
-) {
-    val displayAddress: String
-        get() = if (city != null) "$address, $city" else address
-    
-    val displayRating: String
-        get() = rating?.let { String.format("%.1f", it) } ?: "N/A"
-}

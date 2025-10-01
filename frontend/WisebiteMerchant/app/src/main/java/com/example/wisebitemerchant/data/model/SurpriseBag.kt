@@ -1,7 +1,7 @@
 package com.example.wisebitemerchant.data.model
 
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.*
 
 data class SurpriseBag(
     val id: String,
@@ -12,11 +12,11 @@ data class SurpriseBag(
     val originalValue: Double,
     val discountedPrice: Double,
     val quantityAvailable: Int,
-    val pickupStartTime: LocalDateTime,
-    val pickupEndTime: LocalDateTime,
+    val pickupStartTime: Date,
+    val pickupEndTime: Date,
     val isActive: Boolean,
-    val createdAt: LocalDateTime,
-    val updatedAt: LocalDateTime,
+    val createdAt: Date,
+    val updatedAt: Date,
     val storeId: String
 ) {
     val discountPercentage: Double
@@ -24,14 +24,14 @@ data class SurpriseBag(
     
     val isAvailableForPickup: Boolean
         get() {
-            val now = LocalDateTime.now()
-            return now.isAfter(pickupStartTime) && now.isBefore(pickupEndTime) && quantityAvailable > 0
+            val now = Date()
+            return now.after(pickupStartTime) && now.before(pickupEndTime) && quantityAvailable > 0
         }
     
     val timeDisplayText: String
         get() {
-            val formatter = DateTimeFormatter.ofPattern("HH:mm")
-            return "${pickupStartTime.format(formatter)} - ${pickupEndTime.format(formatter)}"
+            val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+            return "${formatter.format(pickupStartTime)} - ${formatter.format(pickupEndTime)}"
         }
 }
 

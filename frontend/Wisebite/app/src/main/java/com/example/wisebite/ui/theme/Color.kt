@@ -49,6 +49,7 @@ val Blue600 = Color(0xFF1976D2)
 val Purple100 = Color(0xFFE1BEE7)
 val Purple600 = Color(0xFF8E24AA)
 val Red100 = Color(0xFFFFCDD2)
+val Red500 = Color(0xFFF44336)
 val Red600 = Color(0xFFE53935)
 
 // Light Theme Colors - Cream and Green theme

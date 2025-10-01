@@ -37,15 +37,30 @@ class HomeViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             // Load stores, categories, and featured surprise bags in parallel
-            val storesResult = surpriseBagRepository.getAvailableStores(_uiState.value.selectedCity)
+            // Try without city filter first to see if it works
+            val storesResult = surpriseBagRepository.getAvailableStores(null)
             val categoriesResult = surpriseBagRepository.getAvailableCategories()
             val bagsResult = surpriseBagRepository.getAllSurpriseBags(
-                city = _uiState.value.selectedCity
+                city = null
             )
+            
+            // Log results for debugging
+            android.util.Log.d("HomeViewModel", "Stores result: $storesResult")
+            android.util.Log.d("HomeViewModel", "Categories result: $categoriesResult")
+            android.util.Log.d("HomeViewModel", "Bags result: $bagsResult")
             
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                stores = if (storesResult is ApiResult.Success) storesResult.data else emptyList(),
+                stores = if (storesResult is ApiResult.Success) {
+                    android.util.Log.d("HomeViewModel", "Successfully loaded ${storesResult.data.size} stores")
+                    storesResult.data.forEach { store ->
+                        android.util.Log.d("HomeViewModel", "Store: ${store.name} - ${store.address}")
+                    }
+                    storesResult.data
+                } else {
+                    android.util.Log.e("HomeViewModel", "Failed to load stores: $storesResult")
+                    emptyList()
+                },
                 categories = if (categoriesResult is ApiResult.Success) 
                     listOf("Tất cả") + categoriesResult.data 
                 else listOf("Tất cả", "Combo", "Thịt/Cá", "Rau/Củ", "Trái cây", "Bánh mì"),

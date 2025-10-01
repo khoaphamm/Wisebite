@@ -25,8 +25,6 @@ import com.example.wisebitemerchant.data.model.SurpriseBagTimeWindows
 import com.example.wisebitemerchant.ui.theme.Orange600
 import com.example.wisebitemerchant.ui.theme.WarmGrey600
 import java.text.NumberFormat
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,8 +39,8 @@ fun CreateSurpriseBagDialog(
         originalValue: Double,
         discountedPrice: Double,
         quantity: Int,
-        startTime: LocalDateTime,
-        endTime: LocalDateTime
+        startTime: Calendar,
+        endTime: Calendar
     ) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -360,14 +358,18 @@ fun CreateSurpriseBagDialog(
                     
                     Button(
                         onClick = {
-                            val startTime = LocalDateTime.of(
-                                LocalDateTime.now().toLocalDate(),
-                                LocalTime.of(pickupStartHour, 0)
-                            )
-                            val endTime = LocalDateTime.of(
-                                LocalDateTime.now().toLocalDate(),
-                                LocalTime.of(pickupEndHour, 0)
-                            )
+                            val startTime = Calendar.getInstance().apply {
+                                set(Calendar.HOUR_OF_DAY, pickupStartHour)
+                                set(Calendar.MINUTE, 0)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            val endTime = Calendar.getInstance().apply {
+                                set(Calendar.HOUR_OF_DAY, pickupEndHour)
+                                set(Calendar.MINUTE, 0)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
                             
                             onConfirm(
                                 name.trim(),

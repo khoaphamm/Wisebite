@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.*
 
 data class SurpriseBagUiState(
     val isLoading: Boolean = false,
@@ -91,8 +91,8 @@ class SurpriseBagViewModel(
         originalValue: Double,
         discountedPrice: Double,
         quantity: Int,
-        pickupStartTime: LocalDateTime,
-        pickupEndTime: LocalDateTime
+        pickupStartTime: Calendar,
+        pickupEndTime: Calendar
     ) {
         viewModelScope.launch {
             Log.d("SurpriseBagViewModel", "Creating surprise bag: $name")
@@ -111,7 +111,11 @@ class SurpriseBagViewModel(
                 return@launch
             }
             
-            val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+            val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            val now = Date()
+            val pickupStart = Date(pickupStartTime.timeInMillis)
+            val pickupEnd = Date(pickupEndTime.timeInMillis)
+            val availableUntil = Date(pickupStartTime.timeInMillis - 2 * 60 * 60 * 1000) // 2 hours before pickup
             
             val request = CreateSurpriseBagRequest(
                 name = name,
@@ -122,10 +126,10 @@ class SurpriseBagViewModel(
                 discount_percentage = discountPercentageValue, // Use decimal value (0.0 to 1.0)
                 quantity_available = quantity,
                 max_per_customer = 1,
-                available_from = LocalDateTime.now().format(formatter), // Available from now
-                available_until = pickupStartTime.minusHours(2).format(formatter), // Available until 2h before pickup
-                pickup_start_time = pickupStartTime.format(formatter),
-                pickup_end_time = pickupEndTime.format(formatter),
+                available_from = formatter.format(now), // Available from now
+                available_until = formatter.format(availableUntil), // Available until 2h before pickup
+                pickup_start_time = formatter.format(pickupStart),
+                pickup_end_time = formatter.format(pickupEnd),
                 is_active = true,
                 is_auto_generated = false
             )
@@ -172,23 +176,23 @@ class SurpriseBagViewModel(
         originalValue: Double? = null,
         discountedPrice: Double? = null,
         quantity: Int? = null,
-        pickupStartTime: LocalDateTime? = null,
-        pickupEndTime: LocalDateTime? = null,
+        pickupStartTime: Calendar? = null,
+        pickupEndTime: Calendar? = null,
         isActive: Boolean? = null
     ) {
         viewModelScope.launch {
             Log.d("SurpriseBagViewModel", "Updating surprise bag: $bagId")
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
-            val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+            val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
             val request = UpdateSurpriseBagRequest(
                 name = name,
                 description = description,
                 original_value = originalValue,
                 discounted_price = discountedPrice,
                 quantity_available = quantity,
-                pickup_start_time = pickupStartTime?.format(formatter),
-                pickup_end_time = pickupEndTime?.format(formatter),
+                pickup_start_time = pickupStartTime?.let { formatter.format(Date(it.timeInMillis)) },
+                pickup_end_time = pickupEndTime?.let { formatter.format(Date(it.timeInMillis)) },
                 is_active = isActive
             )
             
@@ -321,7 +325,7 @@ class SurpriseBagViewModelFactory(
 
 // Extension function to convert API response to domain model
 private fun SurpriseBagResponse.toSurpriseBag(): SurpriseBag {
-    val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
     return SurpriseBag(
         id = id,
         name = name,
@@ -331,11 +335,11 @@ private fun SurpriseBagResponse.toSurpriseBag(): SurpriseBag {
         originalValue = original_value,
         discountedPrice = discounted_price,
         quantityAvailable = quantity_available,
-        pickupStartTime = LocalDateTime.parse(pickup_start_time, formatter),
-        pickupEndTime = LocalDateTime.parse(pickup_end_time, formatter),
+        pickupStartTime = formatter.parse(pickup_start_time) ?: Date(),
+        pickupEndTime = formatter.parse(pickup_end_time) ?: Date(),
         isActive = is_active,
-        createdAt = LocalDateTime.parse(created_at, formatter),
-        updatedAt = LocalDateTime.parse(updated_at, formatter),
+        createdAt = formatter.parse(created_at) ?: Date(),
+        updatedAt = formatter.parse(updated_at) ?: Date(),
         storeId = store_id
     )
 }

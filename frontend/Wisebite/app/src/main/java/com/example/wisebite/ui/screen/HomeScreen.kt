@@ -283,74 +283,38 @@ fun HomeScreen(
                 )
             }
         } else {
-            // Fallback store card if no data loaded
+            // Show loading error or retry option
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clickable { onNavigateToSurpriseBagList() },
+                    .clickable { viewModel.refreshData() },
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Cơm Tấm Sài Gòn",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black,
-                            modifier = Modifier.weight(1f)
-                        )
-                        
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Rating",
-                                tint = Color(0xFFFFD700),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "4.5",
-                                fontSize = 14.sp,
-                                color = WarmGrey700
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Location",
-                            tint = WarmGrey600,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "45 Lê Lợi, Quận 1",
-                            fontSize = 13.sp,
-                            color = WarmGrey600
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
                     Text(
-                        text = "Cơm tấm sườn nướng, bì, chả trứng đặc biệt. Cơm đéo, sườn thơm ngon...",
-                        fontSize = 13.sp,
-                        color = WarmGrey700,
-                        lineHeight = 18.sp
+                        text = if (uiState.errorMessage != null) {
+                            "Lỗi tải dữ liệu: ${uiState.errorMessage}"
+                        } else {
+                            "Không có cửa hàng nào. Nhấn để thử lại."
+                        },
+                        fontSize = 14.sp,
+                        color = if (uiState.errorMessage != null) Red500 else WarmGrey700,
+                        textAlign = TextAlign.Center
                     )
+                    if (uiState.errorMessage != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Nhấn để thử lại",
+                            fontSize = 12.sp,
+                            color = Green500
+                        )
+                    }
                 }
             }
         }
@@ -472,24 +436,6 @@ fun StoreCard(
                     color = Color.Black,
                     modifier = Modifier.weight(1f)
                 )
-                
-                store.rating?.let { rating ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Rating",
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = store.displayRating,
-                            fontSize = 14.sp,
-                            color = WarmGrey700
-                        )
-                    }
-                }
             }
             
             Spacer(modifier = Modifier.height(4.dp))

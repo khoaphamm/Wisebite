@@ -9,7 +9,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.Instant
+import java.util.Date
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "merchant_auth")
 
@@ -48,7 +48,7 @@ class TokenManager private constructor(private val context: Context) {
             storeId?.let { preferences[STORE_ID_KEY] = it }
             
             // Calculate expiry time (default 7 days if not provided)
-            val expiryTime = Instant.now().plusSeconds((expiresIn ?: 604800).toLong())
+            val expiryTime = System.currentTimeMillis() + ((expiresIn ?: 604800) * 1000L)
             preferences[TOKEN_EXPIRY_KEY] = expiryTime.toString()
         }
     }
@@ -93,10 +93,10 @@ class TokenManager private constructor(private val context: Context) {
         if (expiryString == null) return true
         
         return try {
-            val expiryTime = Instant.parse(expiryString)
-            val now = Instant.now()
+            val expiryTime = expiryString.toLongOrNull() ?: return true
+            val now = System.currentTimeMillis()
             // Add 1-minute buffer to prevent edge cases
-            now.isAfter(expiryTime.minusSeconds(60))
+            now > (expiryTime - 60000)
         } catch (e: Exception) {
             android.util.Log.e("TokenManager", "Error parsing expiry time", e)
             true

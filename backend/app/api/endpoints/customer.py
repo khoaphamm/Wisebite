@@ -28,7 +28,7 @@ def get_available_stores(
     ).distinct()
     
     if city:
-        query = query.where(Store.city.ilike(f"%{city}%"))
+        query = query.where(Store.address.ilike(f"%{city}%"))
     
     stores = session.exec(query).all()
     return stores
@@ -88,7 +88,7 @@ def get_all_surprise_bags(
         query = query.where(SurpriseBag.bag_type == category)
     
     if city:
-        query = query.where(Store.city.ilike(f"%{city}%"))
+        query = query.where(Store.address.ilike(f"%{city}%"))
     
     if available_from:
         query = query.where(SurpriseBag.available_from >= available_from)

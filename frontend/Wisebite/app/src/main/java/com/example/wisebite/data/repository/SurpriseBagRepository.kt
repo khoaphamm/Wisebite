@@ -2,8 +2,10 @@ package com.example.wisebite.data.repository
 
 import android.content.Context
 import android.util.Log
+import com.example.wisebite.data.repository.TokenManager
 import com.example.wisebite.data.model.Store
 import com.example.wisebite.data.model.SurpriseBag
+import com.example.wisebite.data.repository.ApiResult
 import com.example.wisebite.data.remote.RetrofitClient
 import com.example.wisebite.data.remote.WisebiteApiService
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +33,7 @@ class SurpriseBagRepository(
     private suspend fun getAuthHeader(): String? {
         return try {
             val token = tokenManager.getToken().first()
-            if (token.isNotEmpty()) "Bearer $token" else null
+            if (!token.isNullOrEmpty()) "Bearer $token" else null
         } catch (e: Exception) {
             Log.e("SurpriseBagRepository", "Error getting auth token", e)
             null
@@ -41,14 +43,20 @@ class SurpriseBagRepository(
     suspend fun getAvailableStores(city: String? = null): ApiResult<List<Store>> {
         return withContext(Dispatchers.IO) {
             try {
+                Log.d("SurpriseBagRepository", "Fetching stores for city: $city")
                 val response = if (city != null) {
                     apiService.getAvailableStores(city)
                 } else {
                     apiService.getAvailableStores()
                 }
                 
+                Log.d("SurpriseBagRepository", "Response code: ${response.code()}")
+                Log.d("SurpriseBagRepository", "Response body: ${response.body()}")
+                
                 if (response.isSuccessful && response.body() != null) {
-                    ApiResult.Success(response.body()!!)
+                    val stores = response.body()!!
+                    Log.d("SurpriseBagRepository", "Successfully fetched ${stores.size} stores")
+                    ApiResult.Success(stores)
                 } else {
                     val errorMsg = "Failed to fetch stores: ${response.code()} - ${response.message()}"
                     Log.e("SurpriseBagRepository", errorMsg)
@@ -93,10 +101,16 @@ class SurpriseBagRepository(
     ): ApiResult<List<SurpriseBag>> {
         return withContext(Dispatchers.IO) {
             try {
+                Log.d("SurpriseBagRepository", "Fetching surprise bags - category: $category, city: $city, maxPrice: $maxPrice")
                 val response = apiService.getAllSurpriseBags(category, city, null, null, maxPrice)
                 
+                Log.d("SurpriseBagRepository", "Response code: ${response.code()}")
+                Log.d("SurpriseBagRepository", "Response body: ${response.body()}")
+                
                 if (response.isSuccessful && response.body() != null) {
-                    ApiResult.Success(response.body()!!)
+                    val bags = response.body()!!
+                    Log.d("SurpriseBagRepository", "Successfully fetched ${bags.size} surprise bags")
+                    ApiResult.Success(bags)
                 } else {
                     val errorMsg = "Failed to fetch surprise bags: ${response.code()} - ${response.message()}"
                     Log.e("SurpriseBagRepository", errorMsg)
@@ -149,10 +163,4 @@ class SurpriseBagRepository(
             }
         }
     }
-}
-
-sealed class ApiResult<out T> {
-    data class Success<out T>(val data: T) : ApiResult<T>()
-    data class Error(val message: String) : ApiResult<Nothing>()
-    object Loading : ApiResult<Nothing>()
 }
