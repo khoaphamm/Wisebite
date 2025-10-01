@@ -185,6 +185,34 @@ class AuthRepository private constructor(
         }
     }
     
+    suspend fun getMyStore(): Result<Store> {
+        return try {
+            val authToken = tokenManager.getAuthToken()
+            if (authToken == null) {
+                return Result.failure(Exception("Vui lòng đăng nhập lại"))
+            }
+            
+            val response = apiService.getMyStore(authToken)
+            
+            if (response.isSuccessful) {
+                response.body()?.let { store ->
+                    Result.success(store)
+                } ?: Result.failure(Exception("Empty response"))
+            } else {
+                val errorMessage = when (response.code()) {
+                    401 -> "Phiên đăng nhập đã hết hạn"
+                    403 -> "Không có quyền truy cập"
+                    404 -> "Cửa hàng không tồn tại"
+                    else -> "Không thể lấy thông tin cửa hàng"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "Get store error", e)
+            Result.failure(Exception("Lỗi mạng. Vui lòng kiểm tra kết nối."))
+        }
+    }
+    
     suspend fun logout(): Result<Unit> {
         return try {
             tokenManager.clearTokens()
