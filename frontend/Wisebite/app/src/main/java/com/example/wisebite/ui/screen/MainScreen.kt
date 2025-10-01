@@ -22,7 +22,14 @@ import com.example.wisebite.ui.theme.*
 @Composable
 fun MainScreen(
     onLogout: () -> Unit = {},
-    onNavigateToBagDetails: () -> Unit = {}
+    onNavigateToBagDetails: (String) -> Unit = {},
+    onNavigateToOrderDebug: () -> Unit = {},
+    onNavigateToSurpriseBagList: () -> Unit = {},
+    onNavigateToStoreBags: (String) -> Unit = {},
+    onNavigateToPrivacySecurity: () -> Unit = {},
+    onNavigateToHelpSupport: () -> Unit = {},
+    onNavigateToShareApp: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     
@@ -78,7 +85,10 @@ fun MainScreen(
             composable(Routes.HOME) {
                 HomeScreen(
                     onLogout = onLogout,
-                    onNavigateToBagDetails = onNavigateToBagDetails
+                    onNavigateToBagDetails = onNavigateToBagDetails,
+                    onNavigateToOrderDebug = onNavigateToOrderDebug,
+                    onNavigateToSurpriseBagList = onNavigateToSurpriseBagList,
+                    onNavigateToStoreBags = onNavigateToStoreBags
                 )
             }
             
@@ -91,7 +101,11 @@ fun MainScreen(
                     onLogout = onLogout,
                     onNavigateToEditProfile = {
                         navController.navigate(Routes.EDIT_PROFILE)
-                    }
+                    },
+                    onNavigateToPrivacySecurity = onNavigateToPrivacySecurity,
+                    onNavigateToHelpSupport = onNavigateToHelpSupport,
+                    onNavigateToShareApp = onNavigateToShareApp,
+                    onNavigateToSettings = onNavigateToSettings
                 )
             }
             

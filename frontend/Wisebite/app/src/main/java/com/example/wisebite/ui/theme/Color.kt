@@ -40,6 +40,17 @@ val Error = Color(0xFFD32F2F)
 val Success = Green600
 val Warning = Color(0xFFFF8F00)
 
+// Status Colors for Order Status Chips
+val Orange100 = Color(0xFFFFE0B2)
+val Orange200 = Color(0xFFFFCC80)
+val Orange600 = Color(0xFFFF8F00)
+val Blue100 = Color(0xFFBBDEFB)
+val Blue600 = Color(0xFF1976D2)
+val Purple100 = Color(0xFFE1BEE7)
+val Purple600 = Color(0xFF8E24AA)
+val Red100 = Color(0xFFFFCDD2)
+val Red600 = Color(0xFFE53935)
+
 // Light Theme Colors - Cream and Green theme
 val LightPrimary = Green500
 val LightOnPrimary = White

@@ -12,6 +12,7 @@ import androidx.navigation.navArgument
 import com.example.wisebite.data.repository.AuthRepository
 import com.example.wisebite.ui.screen.AuthCheckScreen
 import com.example.wisebite.ui.screen.BagDetailsScreen
+import com.example.wisebite.ui.screen.SurpriseBagListScreen
 import com.example.wisebite.ui.screen.ForgotPasswordEmailScreen
 import com.example.wisebite.ui.screen.ForgotPasswordCodeScreen
 import com.example.wisebite.ui.screen.ForgotPasswordNewPasswordScreen
@@ -19,6 +20,11 @@ import com.example.wisebite.ui.screen.ForgotPasswordSuccessScreen
 import com.example.wisebite.ui.screen.HomeScreen
 import com.example.wisebite.ui.screen.LoginScreen
 import com.example.wisebite.ui.screen.MainScreen
+import com.example.wisebite.ui.screen.OrderDebugScreen
+import com.example.wisebite.ui.screen.PrivacySecurityScreen
+import com.example.wisebite.ui.screen.HelpSupportScreen
+import com.example.wisebite.ui.screen.ShareAppScreen
+import com.example.wisebite.ui.screen.SettingsScreen
 import com.example.wisebite.ui.screen.SignupScreen
 import com.example.wisebite.ui.viewmodel.ForgotPasswordViewModel
 import com.example.wisebite.ui.viewmodel.LoginViewModel
@@ -170,20 +176,113 @@ fun WisebiteNavigation(
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
-                onNavigateToBagDetails = {
-                    navController.navigate(Routes.BAG_DETAILS)
+                onNavigateToBagDetails = { bagId ->
+                    navController.navigate("${Routes.BAG_DETAILS}/$bagId")
+                },
+                onNavigateToSurpriseBagList = {
+                    navController.navigate(Routes.SURPRISE_BAG_LIST)
+                },
+                onNavigateToStoreBags = { storeId ->
+                    navController.navigate("${Routes.STORE_SURPRISE_BAGS}/$storeId")
+                },
+                onNavigateToOrderDebug = {
+                    navController.navigate(Routes.ORDER_DEBUG)
+                },
+                onNavigateToPrivacySecurity = {
+                    navController.navigate(Routes.PRIVACY_SECURITY)
+                },
+                onNavigateToHelpSupport = {
+                    navController.navigate(Routes.HELP_SUPPORT)
+                },
+                onNavigateToShareApp = {
+                    navController.navigate(Routes.SHARE_APP)
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Routes.SETTINGS)
                 }
             )
         }
         
-        composable(Routes.BAG_DETAILS) {
+        composable(
+            route = "${Routes.BAG_DETAILS}/{bagId}",
+            arguments = listOf(navArgument("bagId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val bagId = backStackEntry.arguments?.getString("bagId") ?: ""
             BagDetailsScreen(
+                bagId = bagId,
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onOrderClick = {
+                onOrderSuccess = {
                     // Handle order placement - could navigate to order confirmation
                     // For now, just go back to home
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        // Surprise Bag List Screen
+        composable(Routes.SURPRISE_BAG_LIST) {
+            SurpriseBagListScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onBagClick = { bagId ->
+                    navController.navigate("${Routes.BAG_DETAILS}/$bagId")
+                }
+            )
+        }
+        
+        // Store Surprise Bags Screen
+        composable(
+            route = "${Routes.STORE_SURPRISE_BAGS}/{storeId}",
+            arguments = listOf(navArgument("storeId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val storeId = backStackEntry.arguments?.getString("storeId") ?: ""
+            SurpriseBagListScreen(
+                storeId = storeId,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onBagClick = { bagId ->
+                    navController.navigate("${Routes.BAG_DETAILS}/$bagId")
+                }
+            )
+        }
+        
+        // Debug screen for testing order functionality
+        composable(Routes.ORDER_DEBUG) {
+            OrderDebugScreen()
+        }
+        
+        // Profile sub-screens
+        composable(Routes.PRIVACY_SECURITY) {
+            PrivacySecurityScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable(Routes.HELP_SUPPORT) {
+            HelpSupportScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable(Routes.SHARE_APP) {
+            ShareAppScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onNavigateBack = {
                     navController.popBackStack()
                 }
             )

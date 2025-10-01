@@ -22,7 +22,31 @@ WiseBite is a comprehensive food delivery and ordering platform that connects cu
 
 ## ⚙️ Quick Start
 
-### 1. Clone and Setup
+### Option 1: Automated Setup (Recommended)
+
+For new developers, use the automated setup script:
+
+```bash
+# Windows (PowerShell - Recommended)
+.\setup-db.ps1
+
+# Windows (Command Prompt)
+setup-db.bat
+
+# Linux/Mac
+./setup-db.sh
+```
+
+This script will:
+- ✅ Check Docker status
+- 📦 Build and start all containers
+- 🗄️ Run database migrations
+- 🌱 Populate initial data
+- 🧪 Test API connectivity
+
+### Option 2: Manual Setup
+
+#### 1. Clone and Setup
 
 ```bash
 git clone <repository-url>
@@ -35,36 +59,33 @@ pip install uv
 uv sync
 ```
 
-### 2. Start Test Database
+#### 2. Database Setup
 
 ```bash
-# Start PostgreSQL test database container
-docker-compose -f docker-compose.test.yml up -d
+# Build and start containers (includes database migration)
+docker-compose build
+docker-compose up -d
 
-# Wait for database to be ready (30-60 seconds)
+# Wait for database to be ready (15-30 seconds)
+# Then run migrations
+docker-compose exec app uv run alembic upgrade head
+
+# Optional: Populate initial data
+docker-compose exec app uv run python -c "
+from app.initial_db import populate_store_and_categories, create_initial_superuser
+populate_store_and_categories()
+create_initial_superuser()
+"
 ```
 
-### 3. Run Tests (Verify Setup)
+#### 3. Verify Setup
 
 ```bash
-# Windows PowerShell
-$env:TEST_DATABASE_URL = "postgresql+psycopg2://test_user:test_password@localhost:5433/wisebite_test"
-.venv\Scripts\activate
-python -m pytest tests/ -v
+# Test API endpoint
+curl http://localhost:8000/api/v1/surprise-bag/
+# Expected: {"data":[],"count":0}
 
-# Linux/Mac
-export TEST_DATABASE_URL="postgresql+psycopg2://test_user:test_password@localhost:5433/wisebite_test"
-source .venv/bin/activate
-python -m pytest tests/ -v
-```
-
-### 4. Start Development Server
-
-```bash
-# Start the FastAPI server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Access API documentation at:
+# Access API documentation
 # http://localhost:8000/docs (Swagger UI)
 # http://localhost:8000/redoc (ReDoc)
 ```
@@ -169,6 +190,67 @@ uvicorn app.main:app --reload
 
 # 4. Run tests during development
 python -m pytest tests/api/endpoints/test_transaction.py -v
+```
+
+## 🛠️ Troubleshooting
+
+### Database Setup Issues
+
+#### "could not translate host name 'db'" Error
+This happens when running Alembic outside Docker. Solution:
+```bash
+# Run migrations inside Docker container
+docker-compose exec app uv run alembic upgrade head
+```
+
+#### "relation already exists" Error
+If migration fails due to existing tables:
+```bash
+# Mark current state as migrated
+docker-compose exec app uv run alembic stamp add_categories_inventory
+
+# Then run future migrations normally
+docker-compose exec app uv run alembic upgrade head
+```
+
+#### "API returns 500 Internal Server Error"
+Usually indicates missing database columns:
+```bash
+# Check migration status
+docker-compose exec app uv run alembic current
+
+# Run pending migrations
+docker-compose exec app uv run alembic upgrade head
+```
+
+#### Reset Database (Clean Start)
+```bash
+# Stop containers and remove volumes
+docker-compose down -v
+
+# Rebuild and restart
+docker-compose build
+docker-compose up -d
+
+# Run setup script
+.\setup-db.ps1  # Windows
+./setup-db.sh   # Linux/Mac
+```
+
+### Docker Issues
+
+#### "Docker is not running"
+1. Start Docker Desktop
+2. Wait for Docker to fully initialize
+3. Run setup script again
+
+#### "Port already in use"
+```bash
+# Check what's using the port
+netstat -ano | findstr :8000  # Windows
+lsof -i :8000                 # Linux/Mac
+
+# Stop conflicting services or change port in docker-compose.yml
 ```
 
 ### Environment Configuration

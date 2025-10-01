@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from app.api.endpoints import auth, user, transaction, notification, chat, otp
 
 # Import our NEW routers
-from app.api.endpoints import store, food_item, surprise_bag, order, upload
+from app.api.endpoints import store, food_item, surprise_bag, order, upload, merchant_food_items, customer
 
 api_router = APIRouter()
 
@@ -22,3 +22,9 @@ api_router.include_router(food_item.router, prefix="/food-items", tags=["Vendor 
 api_router.include_router(surprise_bag.router, prefix="/surprise-bag", tags=["Surprise Bags"])
 api_router.include_router(order.router, prefix="/orders", tags=["Orders"])
 api_router.include_router(upload.router, prefix="/upload", tags=["File Upload"])
+
+# Include new merchant management routers
+api_router.include_router(merchant_food_items.router, tags=["Merchant Management"])
+
+# Include customer-facing endpoints
+api_router.include_router(customer.router, prefix="/customer", tags=["Customer"])

@@ -38,9 +38,15 @@ class ImageUploadRepository private constructor(
         }
     }
     
-    private suspend fun getAuthToken(): String {
+    private suspend fun getAuthToken(): String? {
+        // Check if token is expired before using it
+        if (tokenManager.isTokenExpired()) {
+            android.util.Log.w("ImageUploadRepository", "Token is expired")
+            return null
+        }
+        
         val token = tokenManager.getToken().first()
-        return "Bearer $token"
+        return if (token != null) "Bearer $token" else null
     }
     
     private fun createImagePart(uri: Uri, partName: String): MultipartBody.Part {
@@ -69,6 +75,9 @@ class ImageUploadRepository private constructor(
         return try {
             val imagePart = createImagePart(imageUri, "file")
             val authToken = getAuthToken()
+            if (authToken == null) {
+                return Result.failure(Exception("Authentication required - please login again"))
+            }
             val response = apiService.uploadAvatar(authToken, imagePart)
             
             if (response.isSuccessful) {
@@ -88,6 +97,9 @@ class ImageUploadRepository private constructor(
         return try {
             val imagePart = createImagePart(imageUri, "file")
             val authToken = getAuthToken()
+            if (authToken == null) {
+                return Result.failure(Exception("Authentication required - please login again"))
+            }
             val response = apiService.uploadStoreImage(storeId, authToken, imagePart)
             
             if (response.isSuccessful) {
@@ -107,6 +119,9 @@ class ImageUploadRepository private constructor(
         return try {
             val imagePart = createImagePart(imageUri, "file")
             val authToken = getAuthToken()
+            if (authToken == null) {
+                return Result.failure(Exception("Authentication required - please login again"))
+            }
             val response = apiService.uploadFoodItemImage(foodItemId, authToken, imagePart)
             
             if (response.isSuccessful) {
@@ -129,6 +144,9 @@ class ImageUploadRepository private constructor(
             }
             
             val authToken = getAuthToken()
+            if (authToken == null) {
+                return Result.failure(Exception("Authentication required - please login again"))
+            }
             val response = apiService.uploadSurpriseBagImages(bagId, authToken, imageParts)
             
             if (response.isSuccessful) {
@@ -153,6 +171,9 @@ class ImageUploadRepository private constructor(
         return try {
             val base64Data = bitmapToBase64(bitmap, quality)
             val authToken = getAuthToken()
+            if (authToken == null) {
+                return Result.failure(Exception("Authentication required - please login again"))
+            }
             val response = apiService.uploadBase64Image(authToken, folder, publicId, base64Data)
             
             if (response.isSuccessful) {

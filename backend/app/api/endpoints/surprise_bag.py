@@ -127,6 +127,30 @@ def book_surprise_bag(
         customer_id=current_user.id
     )
 
+@router.delete("/{bag_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_surprise_bag(
+    session: SessionDep,
+    current_vendor: CurrentVendor,
+    bag_id: uuid.UUID
+):
+    """ Delete a surprise bag (vendor must own the store). """
+    bag = crud.get_surprise_bag_by_id(session=session, bag_id=bag_id)
+    if not bag:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Surprise bag not found"
+        )
+    
+    # Check if vendor owns the store that owns this surprise bag
+    if bag.store.owner_id != current_vendor.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this surprise bag"
+        )
+    
+    crud.delete_surprise_bag(session=session, bag_id=bag_id)
+    return None
+
 @router.post("/booking/{booking_id}/cancel")
 def cancel_booking(
     session: SessionDep,

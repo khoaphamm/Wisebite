@@ -4,26 +4,135 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.wisebite.ui.component.BagCard
-import com.example.wisebite.ui.component.BagInfo
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.wisebite.data.model.CreateOrderItemRequest
+import com.example.wisebite.data.model.CreateOrderRequest
+import com.example.wisebite.data.model.SurpriseBag
+import com.example.wisebite.data.repository.ApiResult
+import com.example.wisebite.data.repository.SurpriseBagRepository
 import com.example.wisebite.ui.theme.*
+import com.example.wisebite.ui.viewmodel.OrderViewModel
+import com.example.wisebite.util.ViewModelFactory
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BagDetailsScreen(
+    bagId: String,
     onBackClick: () -> Unit = {},
-    onOrderClick: () -> Unit = {}
+    onOrderSuccess: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val orderViewModel: OrderViewModel = viewModel(
+        factory = ViewModelFactory.getInstance(context)
+    )
+    val surpriseBagRepository = SurpriseBagRepository.getInstance(context)
+    
+    val orderUiState by orderViewModel.uiState.collectAsState()
+    
+    // Local state for surprise bag details and order configuration
+    var surpriseBag by remember { mutableStateOf<SurpriseBag?>(null) }
+    var isLoadingBag by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var quantity by remember { mutableStateOf(1) }
+    var selectedPickupTime by remember { mutableStateOf("") }
+    var deliveryAddress by remember { mutableStateOf("") }
+    var orderNotes by remember { mutableStateOf("") }
+    
+    // Load surprise bag details
+    LaunchedEffect(bagId) {
+        isLoadingBag = true
+        when (val result = surpriseBagRepository.getSurpriseBagDetails(bagId)) {
+            is ApiResult.Success -> {
+                surpriseBag = result.data
+                selectedPickupTime = result.data.pickupTimeDisplay
+                deliveryAddress = result.data.store?.displayAddress ?: ""
+                isLoadingBag = false
+            }
+            is ApiResult.Error -> {
+                errorMessage = result.message
+                isLoadingBag = false
+            }
+            else -> {
+                isLoadingBag = false
+            }
+        }
+    }
+    
+    // Show loading dialog when creating order
+    if (orderUiState.isCreatingOrder) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Đang tạo đơn hàng") },
+            text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Green500
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Vui lòng đợi trong khi chúng tôi xử lý đơn hàng của bạn...")
+                }
+            },
+            confirmButton = { }
+        )
+    }
+
+    // Show error dialog if order creation fails
+    orderUiState.errorMessage?.let { error ->
+        AlertDialog(
+            onDismissRequest = { orderViewModel.clearErrorMessage() },
+            title = { Text("Đặt hàng thất bại") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = { orderViewModel.clearErrorMessage() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+    
+    // Show general error dialog
+    errorMessage?.let { error ->
+        AlertDialog(
+            onDismissRequest = { errorMessage = null },
+            title = { Text("Lỗi") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = { errorMessage = null }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    // Monitor order creation success
+    LaunchedEffect(orderUiState.orders.size) {
+        if (!orderUiState.isCreatingOrder && orderUiState.errorMessage == null && orderUiState.orders.isNotEmpty()) {
+            onOrderSuccess()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -33,11 +142,11 @@ fun BagDetailsScreen(
         TopAppBar(
             title = {
                 Text(
-                    text = "Users",
+                    text = "Chi tiết Surprise Bag",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = Green700,
-                    fontSize = 28.sp
+                    fontSize = 20.sp
                 )
             },
             navigationIcon = {
@@ -54,27 +163,356 @@ fun BagDetailsScreen(
             )
         )
 
-        // Scrollable content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        ) {
-            BagCard(
-                bagInfo = BagInfo(
-                    title = "Blind bag",
-                    originalPrice = "30.000đ",
-                    discountedPrice = "18.000đ",
-                    location = "45 Lê Lợi, Quận 1",
-                    pickupTime = "14:00 - 16:00",
-                    quantity = "Còn 3 túi",
-                    description = "Blind bag từ Cơm Tấm Sài Gòn chứa đựng những món ăn ngon với giá ưu đãi. Nội dung túi sẽ là bất ngờ khi bạn nhận được!"
-                ),
-                onOrderClick = onOrderClick
-            )
-            
-            // Add some bottom padding
-            Spacer(modifier = Modifier.height(16.dp))
+        // Content
+        when {
+            isLoadingBag -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Green500)
+                }
+            }
+            surpriseBag == null -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Không tìm thấy Surprise Bag",
+                        fontSize = 16.sp,
+                        color = WarmGrey600
+                    )
+                }
+            }
+            else -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                ) {
+                    // Surprise Bag Info Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            // Store and category
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = surpriseBag!!.store?.name ?: "Unknown Store",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black
+                                    )
+                                    Text(
+                                        text = surpriseBag!!.categoryDisplayName,
+                                        fontSize = 14.sp,
+                                        color = Orange600,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                
+                                // Discount badge
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            Red500.copy(alpha = 0.1f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "-${surpriseBag!!.formattedDiscountPercentage}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Red500
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Bag name and description
+                            Text(
+                                text = surpriseBag!!.name,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            
+                            surpriseBag!!.description?.let { desc ->
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = desc,
+                                    fontSize = 14.sp,
+                                    color = WarmGrey600,
+                                    lineHeight = 20.sp
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            // Price information
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Giá ưu đãi",
+                                        fontSize = 12.sp,
+                                        color = WarmGrey600
+                                    )
+                                    Text(
+                                        text = surpriseBag!!.formattedDiscountedPrice,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Green600
+                                    )
+                                }
+                                
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "Giá gốc",
+                                        fontSize = 12.sp,
+                                        color = WarmGrey600
+                                    )
+                                    Text(
+                                        text = surpriseBag!!.formattedOriginalPrice,
+                                        fontSize = 14.sp,
+                                        color = WarmGrey500,
+                                        style = androidx.compose.ui.text.TextStyle(
+                                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                        )
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            // Location and pickup time
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = "Location",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = WarmGrey600
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = surpriseBag!!.store?.displayAddress ?: "Địa chỉ không có",
+                                    fontSize = 14.sp,
+                                    color = WarmGrey700
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Schedule,
+                                    contentDescription = "Pickup time",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = WarmGrey600
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Nhận hàng: ${surpriseBag!!.pickupTimeDisplay}",
+                                    fontSize = 14.sp,
+                                    color = WarmGrey700
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Text(
+                                text = surpriseBag!!.quantityDisplay,
+                                fontSize = 14.sp,
+                                color = if (surpriseBag!!.quantityAvailable > 0) WarmGrey700 else Red500,
+                                fontWeight = if (surpriseBag!!.quantityAvailable > 0) FontWeight.Normal else FontWeight.Medium
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Quantity selector
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Số lượng",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                IconButton(
+                                    onClick = { if (quantity > 1) quantity-- },
+                                    enabled = quantity > 1
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Remove,
+                                        contentDescription = "Decrease quantity",
+                                        tint = if (quantity > 1) Green600 else WarmGrey400
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.width(16.dp))
+                                
+                                Text(
+                                    text = quantity.toString(),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                                
+                                Spacer(modifier = Modifier.width(16.dp))
+                                
+                                IconButton(
+                                    onClick = { 
+                                        if (quantity < (surpriseBag?.maxPerCustomer ?: 1) && 
+                                            quantity < (surpriseBag?.quantityAvailable ?: 0)) {
+                                            quantity++
+                                        }
+                                    },
+                                    enabled = quantity < (surpriseBag?.maxPerCustomer ?: 1) && 
+                                             quantity < (surpriseBag?.quantityAvailable ?: 0)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Increase quantity",
+                                        tint = if (quantity < (surpriseBag?.maxPerCustomer ?: 1) && 
+                                                  quantity < (surpriseBag?.quantityAvailable ?: 0)) 
+                                               Green600 else WarmGrey400
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Text(
+                                text = "Tối đa: ${surpriseBag?.maxPerCustomer ?: 1} túi/khách hàng",
+                                fontSize = 12.sp,
+                                color = WarmGrey600,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Order notes
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Ghi chú đơn hàng (tùy chọn)",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            OutlinedTextField(
+                                value = orderNotes,
+                                onValueChange = { orderNotes = it },
+                                placeholder = { Text("Thêm ghi chú cho đơn hàng...") },
+                                modifier = Modifier.fillMaxWidth(),
+                                maxLines = 3,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Green500,
+                                    unfocusedBorderColor = WarmGrey300
+                                )
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // Order button
+                    Button(
+                        onClick = {
+                            val orderRequest = CreateOrderRequest(
+                                items = listOf(
+                                    CreateOrderItemRequest(
+                                        surpriseBagId = bagId,
+                                        foodItemId = null,
+                                        quantity = quantity
+                                    )
+                                ),
+                                deliveryAddress = deliveryAddress,
+                                notes = orderNotes.takeIf { it.isNotBlank() } ?: "Đặt từ chi tiết Surprise Bag"
+                            )
+                            orderViewModel.createOrder(orderRequest)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        enabled = surpriseBag?.isAvailable == true && !orderUiState.isCreatingOrder,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Green600,
+                            disabledContainerColor = WarmGrey300
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (orderUiState.isCreatingOrder) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                text = if (surpriseBag?.isAvailable == true) {
+                                    "Đặt ngay • ${String.format("%,.0f", (surpriseBag?.discountedPrice ?: 0.0) * quantity)}đ"
+                                } else {
+                                    "Không khả dụng"
+                                },
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
         }
     }
 }

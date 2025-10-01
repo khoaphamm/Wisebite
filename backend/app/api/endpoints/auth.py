@@ -44,6 +44,23 @@ async def google_signin(session: SessionDep, google_request: GoogleSignInRequest
     """
     Sign in with Google ID token
     """
+    return await _handle_google_signin(session, google_request)
+
+@router.post("/google", response_model=Token)
+async def google_signin_alt(session: SessionDep, google_request: GoogleSignInRequest):
+    """
+    Sign in with Google ID token (alternative endpoint for merchant app)
+    """
+    return await _handle_google_signin(session, google_request)
+
+async def _handle_google_signin(session: SessionDep, google_request: GoogleSignInRequest):
+    """
+    Shared Google Sign-In logic
+    """
+async def _handle_google_signin(session: SessionDep, google_request: GoogleSignInRequest):
+    """
+    Shared Google Sign-In logic
+    """
     try:
         # Verify Google ID token
         google_user_info = await verify_google_token(google_request.id_token)

@@ -447,6 +447,15 @@ def update_surprise_bag(session: Session, db_bag: SurpriseBag, bag_in: SurpriseB
     session.refresh(db_bag)
     return db_bag
 
+def delete_surprise_bag(session: Session, bag_id: uuid.UUID) -> bool:
+    """Delete a surprise bag by ID"""
+    bag = session.get(SurpriseBag, bag_id)
+    if bag:
+        session.delete(bag)
+        session.commit()
+        return True
+    return False
+
 def get_customer_surprise_bag_bookings(session: Session, customer_id: uuid.UUID, skip: int = 0, limit: int = 100):
     # Get customer's orders that contain surprise bags
     orders_query = session.query(Order).filter(Order.customer_id == customer_id)

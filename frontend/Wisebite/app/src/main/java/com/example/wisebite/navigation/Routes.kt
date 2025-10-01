@@ -12,7 +12,18 @@ object Routes {
     const val HOME = "home"
     const val SPLASH = "splash"
     const val BAG_DETAILS = "bag_details"
+    const val SURPRISE_BAG_LIST = "surprise_bag_list"
+    const val STORE_SURPRISE_BAGS = "store_surprise_bags"
     const val EDIT_PROFILE = "edit_profile"
+    const val ORDER_DETAILS = "order_details"
+    const val ORDER_CONFIRMATION = "order_confirmation"
+    const val ORDER_DEBUG = "order_debug"
+    
+    // Profile sub-screens
+    const val PRIVACY_SECURITY = "privacy_security"
+    const val HELP_SUPPORT = "help_support"
+    const val SHARE_APP = "share_app"
+    const val SETTINGS = "settings"
     
     // Future routes
     const val PROFILE = "profile"

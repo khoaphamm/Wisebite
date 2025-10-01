@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import retrofit2.Response
 
 class AuthRepository private constructor(
+    private val context: Context,
     private val tokenManager: TokenManager,
     private val gson: Gson = Gson()
 ) {
@@ -26,7 +27,7 @@ class AuthRepository private constructor(
         fun getInstance(context: Context): AuthRepository {
             return INSTANCE ?: synchronized(this) {
                 val tokenManager = TokenManager.getInstance(context)
-                INSTANCE ?: AuthRepository(tokenManager).also { INSTANCE = it }
+                INSTANCE ?: AuthRepository(context.applicationContext, tokenManager).also { INSTANCE = it }
             }
         }
     }
@@ -43,8 +44,12 @@ class AuthRepository private constructor(
             if (response.isSuccessful) {
                 val loginResponse = response.body()
                 if (loginResponse != null) {
-                    // Save token first
-                    tokenManager.saveToken(loginResponse.accessToken)
+                    // Save tokens with expiration info
+                    tokenManager.saveTokens(
+                        accessToken = loginResponse.accessToken,
+                        refreshToken = loginResponse.refreshToken,
+                        expiresIn = loginResponse.expiresIn
+                    )
                     
                     // Fetch user data with the new token
                     try {
@@ -142,8 +147,12 @@ class AuthRepository private constructor(
             if (response.isSuccessful) {
                 val loginResponse = response.body()
                 if (loginResponse != null) {
-                    // Save token first
-                    tokenManager.saveToken(loginResponse.accessToken)
+                    // Save tokens with expiration info
+                    tokenManager.saveTokens(
+                        accessToken = loginResponse.accessToken,
+                        refreshToken = loginResponse.refreshToken,
+                        expiresIn = loginResponse.expiresIn
+                    )
                     
                     // Fetch user data with the new token
                     try {
@@ -178,26 +187,14 @@ class AuthRepository private constructor(
     }
     
     suspend fun getCurrentUser(): Result<User> {
-        return try {
-            val authHeader = tokenManager.getAuthHeader().first()
-            if (authHeader != null) {
-                val response = RetrofitClient.apiService.getCurrentUser(authHeader)
-                if (response.isSuccessful) {
-                    val user = response.body()
-                    if (user != null) {
-                        tokenManager.saveUserJson(gson.toJson(user))
-                        Result.success(user)
-                    } else {
-                        Result.failure(Exception("User data is null"))
-                    }
-                } else {
-                    Result.failure(Exception("Failed to get user data"))
-                }
-            } else {
-                Result.failure(Exception("No auth token available"))
-            }
-        } catch (e: Exception) {
-            Result.failure(Exception("Network error. Please check your connection."))
+        return executeWithTokenRefresh { authHeader ->
+            RetrofitClient.apiService.getCurrentUser(authHeader)
+        }.onSuccess { user ->
+            // Save updated user data
+            tokenManager.saveUserJson(gson.toJson(user))
+            android.util.Log.d("AuthRepository", "getCurrentUser - success: ${user.email}")
+        }.onFailure { exception ->
+            android.util.Log.e("AuthRepository", "getCurrentUser - failed: ${exception.message}")
         }
     }
     
@@ -247,6 +244,55 @@ class AuthRepository private constructor(
     
     suspend fun isLoggedIn(): Boolean {
         return tokenManager.getToken().first() != null
+    }
+    
+    /**
+     * Execute an API call with automatic token refresh on authentication failure
+     */
+    suspend fun <T> executeWithTokenRefresh(
+        apiCall: suspend (authHeader: String) -> retrofit2.Response<T>
+    ): Result<T> {
+        return try {
+            // Check if token is expired before making the call
+            if (tokenManager.isTokenExpired()) {
+                android.util.Log.d("AuthRepository", "Token is expired, need to re-authenticate")
+                return Result.failure(Exception("Token expired - please login again"))
+            }
+            
+            val authHeader = tokenManager.getAuthHeader().first()
+            if (authHeader == null) {
+                return Result.failure(Exception("No auth token available"))
+            }
+            
+            // Make the initial API call
+            val response = apiCall(authHeader)
+            
+            if (response.isSuccessful) {
+                response.body()?.let { body ->
+                    Result.success(body)
+                } ?: Result.failure(Exception("Response body is null"))
+            } else if (response.code() == 401 || response.code() == 403) {
+                android.util.Log.w("AuthRepository", "Auth failure (${response.code()}), clearing tokens")
+                // Token is invalid, clear stored tokens
+                tokenManager.clearAll()
+                
+                // Notify auth state manager about the failure
+                try {
+                    val authStateManager = AuthStateManager.getInstance(context)
+                    authStateManager.handleAuthenticationFailure("Authentication expired")
+                } catch (e: Exception) {
+                    android.util.Log.e("AuthRepository", "Failed to notify auth state manager", e)
+                }
+                
+                Result.failure(Exception("Authentication expired - please login again"))
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Result.failure(Exception("API call failed: ${response.code()} - $errorBody"))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Network error in executeWithTokenRefresh", e)
+            Result.failure(Exception("Network error: ${e.message}"))
+        }
     }
     
     suspend fun getStoredUser(): User? {

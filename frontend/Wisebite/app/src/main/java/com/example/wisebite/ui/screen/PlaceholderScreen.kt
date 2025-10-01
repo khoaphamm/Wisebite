@@ -111,29 +111,3 @@ fun PaymentMethodsScreen(onBackClick: () -> Unit = {}) {
     )
 }
 
-@Composable
-fun PrivacySecurityScreen(onBackClick: () -> Unit = {}) {
-    PlaceholderScreen(
-        title = "Quyền riêng tư & Bảo mật",
-        subtitle = "Cài đặt quyền riêng tư và bảo mật tài khoản",
-        onBackClick = onBackClick
-    )
-}
-
-@Composable
-fun HelpSupportScreen(onBackClick: () -> Unit = {}) {
-    PlaceholderScreen(
-        title = "Trợ giúp & Hỗ trợ",
-        subtitle = "Tìm câu trả lời và liên hệ hỗ trợ",
-        onBackClick = onBackClick
-    )
-}
-
-@Composable
-fun SettingsScreen(onBackClick: () -> Unit = {}) {
-    PlaceholderScreen(
-        title = "Cài đặt",
-        subtitle = "Tùy chỉnh cài đặt ứng dụng của bạn",
-        onBackClick = onBackClick
-    )
-}

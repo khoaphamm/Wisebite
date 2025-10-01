@@ -11,6 +11,7 @@ import com.example.wisebite.data.repository.ImageUploadRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class ProfileUiState(
@@ -30,12 +31,27 @@ class ProfileViewModel(
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
     
     init {
-        loadUserData()
+        // Add a small delay to ensure token is ready before making API calls
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(500) // Small delay to let authentication complete
+            loadUserData()
+        }
     }
     
     private fun loadUserData() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            
+            // First check if user is authenticated
+            val tokenManager = com.example.wisebite.data.repository.TokenManager.getInstance(android.app.Application())
+            val token = tokenManager.getToken().first()
+            if (token == null) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "User not authenticated"
+                )
+                return@launch
+            }
             
             // First try to get stored user data for immediate display
             val storedUser = authRepository.getStoredUser()
@@ -53,6 +69,7 @@ class ProfileViewModel(
                     )
                 }
                 .onFailure { exception ->
+                    android.util.Log.e("ProfileViewModel", "loadUserData failed", exception)
                     // If we have stored data, keep it but stop loading
                     // If no stored data, show error
                     if (storedUser == null) {

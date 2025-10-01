@@ -1,4 +1,4 @@
-package com.example.wisebite.ui.screen
+ package com.example.wisebite.ui.screen
 
 import android.content.Context
 import android.content.Intent

@@ -25,13 +25,17 @@ RUN apt-get update && apt-get install -y build-essential libpq-dev curl && \
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen
 
-# 6. Copy the entire application code into the container
+# 6. Copy Alembic configuration and migration files
+COPY alembic.ini ./
+COPY ./alembic /app/alembic
+
+# 7. Copy the entire application code into the container
 COPY ./app /app/app
 
-# 7. Expose the port the app runs on
+# 8. Expose the port the app runs on
 EXPOSE 8000
 
-# 8. Define the command to run the application
+# 9. Define the command to run the application
 # Use uv to run uvicorn with the FastAPI app found in app/main.py
 # --host 0.0.0.0 is CRITICAL to make the server accessible from outside the container.
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -69,7 +69,13 @@ data class LoginResponse(
     val accessToken: String,
     
     @SerializedName("token_type")
-    val tokenType: String = "bearer"
+    val tokenType: String = "bearer",
+    
+    @SerializedName("refresh_token")
+    val refreshToken: String? = null,
+    
+    @SerializedName("expires_in")
+    val expiresIn: Int? = null // Token lifetime in seconds
 )
 
 data class ApiResponse<T>(

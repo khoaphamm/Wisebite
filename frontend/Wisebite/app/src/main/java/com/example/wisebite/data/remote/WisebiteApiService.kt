@@ -10,6 +10,12 @@ import com.example.wisebite.data.model.SignupRequest
 import com.example.wisebite.data.model.User
 import com.example.wisebite.data.model.UserUpdateRequest
 import com.example.wisebite.data.model.UploadResponse
+import com.example.wisebite.data.model.CreateOrderRequest
+import com.example.wisebite.data.model.Order
+import com.example.wisebite.data.model.OrdersResponse
+import com.example.wisebite.data.model.OrderStatusUpdateRequest
+import com.example.wisebite.data.model.Store
+import com.example.wisebite.data.model.SurpriseBag
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -23,6 +29,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface WisebiteApiService {
     
@@ -94,6 +101,66 @@ interface WisebiteApiService {
         @Field("public_id") publicId: String,
         @Field("base64_data") base64Data: String
     ): Response<UploadResponse>
+    
+    // Order Endpoints
+    @POST("orders/")
+    suspend fun createOrder(
+        @Header("Authorization") token: String,
+        @Body orderRequest: CreateOrderRequest
+    ): Response<Order>
+    
+    @GET("orders/me")
+    suspend fun getUserOrders(
+        @Header("Authorization") token: String
+    ): Response<OrdersResponse>
+    
+    @GET("orders/{orderId}")
+    suspend fun getOrder(
+        @Header("Authorization") token: String,
+        @Path("orderId") orderId: String
+    ): Response<Order>
+    
+    @PATCH("orders/{orderId}/status")
+    suspend fun updateOrderStatus(
+        @Header("Authorization") token: String,
+        @Path("orderId") orderId: String,
+        @Body statusUpdate: OrderStatusUpdateRequest
+    ): Response<Order>
+    
+    @POST("orders/{orderId}/cancel")
+    suspend fun cancelOrder(
+        @Header("Authorization") token: String,
+        @Path("orderId") orderId: String
+    ): Response<Order>
+    
+    // Customer Endpoints for browsing stores and surprise bags
+    @GET("customer/stores")
+    suspend fun getAvailableStores(
+        @Query("city") city: String? = null
+    ): Response<List<Store>>
+    
+    @GET("customer/stores/{store_id}/surprise-bags")
+    suspend fun getStoreSurpriseBags(
+        @Path("store_id") storeId: String,
+        @Query("category") category: String? = null
+    ): Response<List<SurpriseBag>>
+    
+    @GET("customer/surprise-bags")
+    suspend fun getAllSurpriseBags(
+        @Query("category") category: String? = null,
+        @Query("city") city: String? = null,
+        @Query("available_from") availableFrom: String? = null,
+        @Query("available_until") availableUntil: String? = null,
+        @Query("max_price") maxPrice: Double? = null
+    ): Response<List<SurpriseBag>>
+    
+    @GET("customer/surprise-bags/{bag_id}")
+    suspend fun getSurpriseBagDetails(
+        @Path("bag_id") bagId: String
+    ): Response<SurpriseBag>
+    
+    @GET("customer/categories")
+    suspend fun getAvailableCategories(): Response<List<String>>
     
     companion object {
         // For demo usage with ngrok - Update this URL when you have a new ngrok session

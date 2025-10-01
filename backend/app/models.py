@@ -66,41 +66,166 @@ class Store(SQLModel, table=True):
     surprise_bags: List["SurpriseBag"] = Relationship(back_populates="store")
 
 
-# --- 3. Product-Related Models (NEW) ---
+# --- 3. Product Category System (NEW) ---
+
+class Category(SQLModel, table=True):
+    """Hierarchical category system for food items"""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(max_length=255, index=True)
+    parent_category_id: Optional[uuid.UUID] = Field(foreign_key="category.id", default=None)
+    description: Optional[str] = Field(default=None, max_length=500)
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    
+    # Self-referential relationship for hierarchy
+    parent_category: Optional["Category"] = Relationship(
+        back_populates="subcategories",
+        sa_relationship_kwargs={"remote_side": "Category.id"}
+    )
+    subcategories: List["Category"] = Relationship(back_populates="parent_category")
+    
+    # Products in this category
+    food_items: List["FoodItem"] = Relationship(back_populates="category")
+
+# --- 4. Enhanced Product Models ---
 
 class FoodItem(SQLModel, table=True):
-    """NEW: A specific food item a vendor sells (e.g., 'Banh Mi Thit')."""
+    """Enhanced food item with better inventory management"""
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(max_length=100)
+    name: str = Field(max_length=255, index=True)
     description: Optional[str] = Field(default=None, max_length=500)
+    sku: Optional[str] = Field(default=None, max_length=100, index=True)  # Stock Keeping Unit
     image_url: Optional[str] = Field(default=None)
-    original_price: float = Field(ge=0)
-    quantity: int = Field(ge=0, default=0)
-    category: Optional[str] = Field(default=None, max_length=50)
+    
+    # Pricing
+    standard_price: float = Field(ge=0)  # Regular selling price
+    cost_price: Optional[float] = Field(default=None, ge=0)  # Cost to store (for profit calculation)
+    
+    # Product characteristics
+    is_fresh: bool = Field(default=True)  # TRUE for fresh groceries, FALSE for packaged goods
     expires_at: Optional[datetime] = Field(default=None)
+    
+    # Inventory management
+    total_quantity: int = Field(ge=0, default=0)  # Total stock
+    surplus_quantity: int = Field(ge=0, default=0)  # Available for surprise bags
+    reserved_quantity: int = Field(ge=0, default=0)  # Reserved for orders
+    available_quantity: int = Field(ge=0, default=0)  # Available for regular sale
+    
+    # Surplus management
+    is_marked_for_surplus: bool = Field(default=False)  # Merchant can tick this
+    surplus_discount_percentage: Optional[float] = Field(default=None, ge=0, le=1)
+    surplus_price: Optional[float] = Field(default=None, ge=0)
+    marked_surplus_at: Optional[datetime] = Field(default=None)
+    
+    # Additional info
     ingredients: Optional[str] = Field(default=None, max_length=500)
     allergens: Optional[str] = Field(default=None, max_length=200)
+    weight: Optional[float] = Field(default=None, ge=0)  # Weight in grams
+    unit: Optional[str] = Field(default="piece", max_length=20)  # kg, piece, pack, etc.
+    
+    # Status
     is_available: bool = Field(default=True)
+    is_active: bool = Field(default=True)
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now, sa_column_kwargs={"onupdate": func.now()})
+    last_inventory_update: Optional[datetime] = Field(default=None)
 
-    store_id: uuid.UUID = Field(foreign_key="store.id")
+    # Relationships
+    store_id: uuid.UUID = Field(foreign_key="store.id", index=True)
+    category_id: Optional[uuid.UUID] = Field(foreign_key="category.id", default=None)
+    
     store: "Store" = Relationship(back_populates="food_items")
+    category: Optional["Category"] = Relationship(back_populates="food_items")
     order_items: List["OrderItem"] = Relationship(back_populates="food_item")
+    surprise_bag_items: List["SurpriseBagItem"] = Relationship(back_populates="food_item")
+    inventory_logs: List["InventoryLog"] = Relationship(back_populates="food_item")
+
+# --- 5. Inventory Management (NEW) ---
+
+class InventoryLog(SQLModel, table=True):
+    """Track inventory changes for better management"""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    food_item_id: uuid.UUID = Field(foreign_key="fooditem.id", index=True)
+    
+    # Change details
+    change_type: str = Field(max_length=50)  # "restock", "sale", "surplus_marked", "expired", etc.
+    quantity_change: int  # Positive for additions, negative for reductions
+    previous_quantity: int = Field(ge=0)
+    new_quantity: int = Field(ge=0)
+    
+    # Additional context
+    reason: Optional[str] = Field(default=None, max_length=255)
+    reference_id: Optional[uuid.UUID] = Field(default=None)  # Order ID, surprise bag ID, etc.
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.now)
+    
+    # Relationships
+    food_item: "FoodItem" = Relationship(back_populates="inventory_logs")
+
+# --- 6. Enhanced Surprise Bag System ---
 
 class SurpriseBag(SQLModel, table=True):
-    """NEW: A 'Túi Bất Ngờ' that customers can buy."""
+    """Enhanced surprise bag with better item management"""
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(default="Túi Bất Ngờ", max_length=100)
+    name: str = Field(default="Túi Bất Ngờ", max_length=255)
     description: Optional[str] = Field(default=None, max_length=500)
-    original_value: float = Field(ge=0)
-    discounted_price: float = Field(ge=0)
+    
+    # Bag type
+    bag_type: str = Field(default="combo", max_length=50)  # "single_item", "combo"
+    
+    # Pricing
+    original_value: float = Field(ge=0)  # Total value of items inside
+    discounted_price: float = Field(ge=0)  # Price customer pays
+    discount_percentage: float = Field(ge=0, le=1)  # Actual discount applied
+    
+    # Availability
     quantity_available: int = Field(ge=0)
+    max_per_customer: int = Field(default=1)
+    
+    # Time management
+    available_from: datetime  # When customers can start ordering
+    available_until: datetime  # Last order time
     pickup_start_time: datetime
     pickup_end_time: datetime
+    
+    # Status
+    is_active: bool = Field(default=True)
+    is_auto_generated: bool = Field(default=False)  # Generated from surplus items
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now, sa_column_kwargs={"onupdate": func.now()})
 
-    store_id: uuid.UUID = Field(foreign_key="store.id")
+    # Relationships
+    store_id: uuid.UUID = Field(foreign_key="store.id", index=True)
     store: "Store" = Relationship(back_populates="surprise_bags")
     
+    bag_items: List["SurpriseBagItem"] = Relationship(back_populates="surprise_bag")
     order_items: List["OrderItem"] = Relationship(back_populates="surprise_bag")
+
+class SurpriseBagItem(SQLModel, table=True):
+    """Items that can be included in surprise bags"""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    
+    surprise_bag_id: uuid.UUID = Field(foreign_key="surprisebag.id")
+    food_item_id: uuid.UUID = Field(foreign_key="fooditem.id")
+    
+    # Quantity range for this item in the bag
+    min_quantity: int = Field(gt=0, default=1)
+    max_quantity: int = Field(gt=0, default=1)
+    
+    # Value contribution
+    estimated_value_per_unit: float = Field(ge=0)
+    weight_in_selection: float = Field(default=1.0, ge=0)  # Priority in selection algorithm
+    
+    # Relationships
+    surprise_bag: "SurpriseBag" = Relationship(back_populates="bag_items")
+    food_item: "FoodItem" = Relationship(back_populates="surprise_bag_items")
+
+# --- 7. Previous Product-Related Models (KEEP FOR COMPATIBILITY) ---
 
 
 # --- 4. Customer Order Management (HEAVILY ADAPTED) ---
