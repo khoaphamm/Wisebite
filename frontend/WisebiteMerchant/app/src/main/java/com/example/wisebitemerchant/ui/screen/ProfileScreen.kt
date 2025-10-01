@@ -23,18 +23,24 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wisebitemerchant.ui.theme.*
+import com.example.wisebitemerchant.ui.viewmodel.ProfileViewModel
+import com.example.wisebitemerchant.util.ViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +56,13 @@ fun ProfileScreen(
     onNavigateToShareApp: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val viewModel: ProfileViewModel = viewModel(
+        factory = ViewModelFactory.getInstance(context)
+    )
+    
+    val uiState by viewModel.uiState.collectAsState()
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -65,7 +78,7 @@ fun ProfileScreen(
                 )
             },
             actions = {
-                IconButton(onClick = { /* TODO: Refresh user data */ }) {
+                IconButton(onClick = { viewModel.refreshUserData() }) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh"
@@ -81,9 +94,9 @@ fun ProfileScreen(
         ) {
             // Merchant Profile Card
             MerchantProfileCard(
-                merchantName = "Test Minimart", // TODO: Get from user data
-                merchantEmail = "vendor@test.com", // TODO: Get from user data
-                storeName = "Test Minimart",
+                merchantName = uiState.user?.fullName ?: "Loading...",
+                merchantEmail = uiState.user?.email ?: "Loading...",
+                storeName = uiState.store?.storeName ?: "My Store",
                 onEditClick = onNavigateToEditProfile
             )
             
@@ -98,7 +111,7 @@ fun ProfileScreen(
             
             // Merchant Settings Section
             MerchantSettingsSection(
-                onLogout = onLogout,
+                onLogout = { viewModel.logout(onLogout) },
                 onEditProfile = onNavigateToEditProfile,
                 onStoreSettings = onNavigateToStoreSettings,
                 onNavigateToNotifications = onNavigateToNotifications,
@@ -128,9 +141,9 @@ fun ProfileScreen(
 
 @Composable
 fun MerchantProfileCard(
-    merchantName: String = "Test Merchant",
-    merchantEmail: String = "merchant@example.com",
-    storeName: String = "My Store",
+    merchantName: String = "",
+    merchantEmail: String = "",
+    storeName: String = "",
     onEditClick: () -> Unit = {}
 ) {
     Card(
