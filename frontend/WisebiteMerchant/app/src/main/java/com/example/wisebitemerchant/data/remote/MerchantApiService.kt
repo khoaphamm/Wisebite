@@ -20,7 +20,7 @@ interface MerchantApiService {
     @POST("auth/google")
     suspend fun signInWithGoogle(@Body request: GoogleSignInRequest): Response<LoginResponse>
     
-    @GET("auth/me")
+    @GET("user/me")
     suspend fun getCurrentUser(@Header("Authorization") token: String): Response<MerchantUser>
     
     @GET("stores/me")
