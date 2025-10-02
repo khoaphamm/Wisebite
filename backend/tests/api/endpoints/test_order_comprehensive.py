@@ -355,3 +355,56 @@ def test_order_unauthorized_access(client: TestClient):
     response = customer2_client.get(f"/api/v1/orders/{order_id}")
     
     assert_status_code(response, 403)
+
+
+@pytest.mark.integration
+def test_order_accepted_notification_sent_to_merchant_and_customer(client: TestClient):
+    """Test that notification is sent to both merchant and customer when order is accepted."""
+    vendor_client, vendor_token, vendor_id = create_authenticated_client(client, "vendor")
+    customer_client, customer_token, customer_id = create_authenticated_client(client, "customer")
+    
+    # Setup store and food item
+    store_data = create_random_store_data()
+    store_response = vendor_client.post("/api/v1/stores/", json=store_data)
+    store_id = store_response.json()["id"]
+    
+    food_data = create_random_food_item_data(store_id)
+    food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
+    food_id = food_response.json()["id"]
+    
+    # Customer creates order
+    order_data = {
+        "items": [{"food_item_id": food_id, "quantity": 1}],
+        "store_id": store_id,
+        "delivery_address": "123 Test Street"
+    }
+    order_response = customer_client.post("/api/v1/orders/", json=order_data)
+    order_id = order_response.json()["id"]
+    
+    # Get initial notification counts
+    vendor_notifications_before = vendor_client.get("/api/v1/users/me/notifications")
+    customer_notifications_before = customer_client.get("/api/v1/users/me/notifications")
+    
+    vendor_notif_count_before = len(vendor_notifications_before.json()) if vendor_notifications_before.status_code == 200 else 0
+    customer_notif_count_before = len(customer_notifications_before.json()) if customer_notifications_before.status_code == 200 else 0
+    
+    # Vendor accepts order (updates status to confirmed)
+    status_update = {"status": "confirmed"}
+    response = vendor_client.patch(f"/api/v1/orders/{order_id}/status", json=status_update)
+    
+    assert_status_code(response, 200)
+    response_data = response.json()
+    assert response_data["status"] == "confirmed"
+    
+    # Check that both vendor and customer received notifications
+    vendor_notifications_after = vendor_client.get("/api/v1/users/me/notifications")
+    customer_notifications_after = customer_client.get("/api/v1/users/me/notifications")
+    
+    # Verify notifications were created
+    if vendor_notifications_after.status_code == 200:
+        vendor_notif_count_after = len(vendor_notifications_after.json())
+        assert vendor_notif_count_after > vendor_notif_count_before, "Vendor should receive notification when accepting order"
+    
+    if customer_notifications_after.status_code == 200:
+        customer_notif_count_after = len(customer_notifications_after.json())
+        assert customer_notif_count_after > customer_notif_count_before, "Customer should receive notification when order is accepted"

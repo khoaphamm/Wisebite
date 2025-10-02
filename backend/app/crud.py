@@ -736,10 +736,54 @@ def update_order_status(session: Session, order_id: uuid.UUID, new_status: Order
     """Update order status."""
     order = session.get(Order, order_id)
     if order:
+        old_status = order.status
         order.status = new_status
         session.add(order)
         session.commit()
         session.refresh(order)
+        
+        # Send notification when order is accepted by vendor (status changed to confirmed)
+        if new_status == OrderStatus.CONFIRMED and old_status != OrderStatus.CONFIRMED:
+            try:
+                # Get customer name
+                customer = session.get(User, order.customer_id)
+                customer_name = customer.full_name if customer else "Khách hàng"
+                
+                # Get vendor/store info
+                if order.items:
+                    first_item = order.items[0]
+                    store = None
+                    
+                    # Try to get store from surprise bag or food item
+                    if first_item.surprise_bag_id:
+                        surprise_bag = session.get(SurpriseBag, first_item.surprise_bag_id)
+                        if surprise_bag:
+                            store = session.get(Store, surprise_bag.store_id)
+                    elif first_item.food_item_id:
+                        food_item = session.get(FoodItem, first_item.food_item_id)
+                        if food_item:
+                            store = session.get(Store, food_item.store_id)
+                    
+                    if store:
+                        # Send notification to merchant (vendor)
+                        merchant_notification = NotificationCreate(
+                            title="✅ Đơn hàng đã được chấp nhận",
+                            message=f"Bạn đã chấp nhận đơn hàng #{str(order_id)[:8]} của {customer_name} ({len(order.items)} món). Tổng: {order.total_amount:,.0f}đ",
+                            is_important=True
+                        )
+                        create_notification(session, merchant_notification, [store.owner_id])
+                        
+                        # Send notification to customer
+                        customer_notification = NotificationCreate(
+                            title="✅ Đơn hàng được chấp nhận",
+                            message=f"Cửa hàng {store.name} đã chấp nhận đơn hàng #{str(order_id)[:8]} của bạn!",
+                            is_important=True
+                        )
+                        create_notification(session, customer_notification, [order.customer_id])
+            except Exception as e:
+                # Don't fail the order update if notification fails
+                print(f"Failed to send order accepted notification for order {order_id}: {e}")
+    
     return order
 
 def cancel_order(session: Session, order_id: uuid.UUID) -> Order:

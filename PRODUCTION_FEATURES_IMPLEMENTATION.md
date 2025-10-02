@@ -95,6 +95,7 @@ This implementation adds four critical production-ready features to both the cus
 
 **Merchant Notification Types:**
 - New order alerts (priority sound/vibration)
+- Order accepted confirmations (with sound/vibration)
 - Order cancellations
 - Payment confirmations
 - System updates
