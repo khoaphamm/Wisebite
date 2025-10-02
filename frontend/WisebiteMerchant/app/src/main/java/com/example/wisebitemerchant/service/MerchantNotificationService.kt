@@ -26,6 +26,7 @@ data class MerchantNotification(
 
 enum class MerchantNotificationType {
     NEW_ORDER,
+    ORDER_ACCEPTED,
     ORDER_CANCELLED,
     PICKUP_READY,
     SYSTEM_UPDATE,
@@ -280,7 +281,7 @@ class MerchantNotificationService private constructor(private val context: Conte
     
     private fun showPushNotification(notification: MerchantNotification) {
         val sound = when (notification.type) {
-            MerchantNotificationType.NEW_ORDER -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+            MerchantNotificationType.NEW_ORDER, MerchantNotificationType.ORDER_ACCEPTED -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
             else -> null
         }
         
@@ -293,6 +294,7 @@ class MerchantNotificationService private constructor(private val context: Conte
             .setVibrate(
                 when (notification.type) {
                     MerchantNotificationType.NEW_ORDER -> longArrayOf(0, 500, 200, 500, 200, 500)
+                    MerchantNotificationType.ORDER_ACCEPTED -> longArrayOf(0, 300, 100, 300)
                     else -> longArrayOf(0, 200)
                 }
             )
@@ -384,6 +386,32 @@ class MerchantNotificationService private constructor(private val context: Conte
             val currentList = _notificationList.value.toMutableList()
             currentList.add(0, notification)
             _notificationList.value = currentList
+            
+            showPushNotification(notification)
+        }
+    }
+    
+    fun simulateOrderAccepted(orderId: String, customerName: String, itemCount: Int) {
+        serviceScope.launch {
+            val notification = MerchantNotification(
+                id = "accepted_$orderId",
+                title = "✅ Đơn hàng đã được chấp nhận",
+                message = "Bạn đã chấp nhận đơn hàng #${orderId.take(8)} của $customerName ($itemCount món)",
+                type = MerchantNotificationType.ORDER_ACCEPTED,
+                isImportant = true,
+                orderId = orderId
+            )
+            
+            _notifications.emit(notification)
+            // Also add to persistent list for consistency
+            val currentList = _notificationList.value.toMutableList()
+            currentList.add(0, notification)
+            _notificationList.value = currentList
+            
+            // Update unread count
+            if (notification.isImportant) {
+                _unreadCount.value = _unreadCount.value + 1
+            }
             
             showPushNotification(notification)
         }
