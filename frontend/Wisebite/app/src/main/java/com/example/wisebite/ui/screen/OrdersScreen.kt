@@ -200,34 +200,37 @@ private fun OrderCard(
             )
             
             Spacer(modifier = Modifier.height(8.dp))
-            
-            // Order items summary
-            Text(
-                text = "${order.items.size} item${if (order.items.size > 1) "s" else ""}",
-                fontSize = 14.sp,
-                color = WarmGrey600
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Total and date
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
+
+            if(!order.items.isNullOrEmpty()) {
+
+                // Order items summary
                 Text(
-                    text = formatPrice(order.totalAmount),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Green500
+                    text = "${order.items.size} item${if (order.items.size > 1) "s" else ""}",
+                    fontSize = 14.sp,
+                    color = WarmGrey600
                 )
-                
-                Text(
-                    text = formatDate(order.createdAt),
-                    fontSize = 12.sp,
-                    color = WarmGrey500
-                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Total and date
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = formatPrice(order.totalAmount),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Green500
+                    )
+
+                    Text(
+                        text = formatDate(order.createdAt),
+                        fontSize = 12.sp,
+                        color = WarmGrey500
+                    )
+                }
             }
         }
     }

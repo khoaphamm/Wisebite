@@ -1,5 +1,6 @@
 package com.example.wisebite.ui.screen
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -236,7 +237,14 @@ fun HomeScreen(
                 items(uiState.featuredSurpriseBags) { bag ->
                     FeaturedSurpriseBagCard(
                         bag = bag,
-                        onClick = { onNavigateToBagDetails(bag.id) }
+                        onClick = {
+                            if (!bag.id.isNullOrBlank()) {
+                                onNavigateToBagDetails(bag.id)
+                            } else {
+                                // Optional: Log an error or show a toast to the user
+                                Log.e("HomeScreen", "Attempted to navigate with a null or blank bag ID.")
+                            }
+                        }
                     )
                 }
             }
