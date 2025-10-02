@@ -7,6 +7,7 @@ import com.example.wisebitemerchant.data.manager.TokenManager
 import com.example.wisebitemerchant.data.remote.RetrofitClient
 import com.example.wisebitemerchant.data.repository.AuthRepository
 import com.example.wisebitemerchant.ui.viewmodel.LoginViewModel
+import com.example.wisebitemerchant.ui.viewmodel.ProfileViewModel
 import com.example.wisebitemerchant.ui.viewmodel.SignupViewModel
 
 class ViewModelFactory private constructor(private val context: Context) : ViewModelProvider.Factory {
@@ -35,6 +36,9 @@ class ViewModelFactory private constructor(private val context: Context) : ViewM
             }
             modelClass.isAssignableFrom(SignupViewModel::class.java) -> {
                 SignupViewModel(authRepository) as T
+            }
+            modelClass.isAssignableFrom(ProfileViewModel::class.java) -> {
+                ProfileViewModel(authRepository) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
