@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
@@ -56,7 +57,8 @@ fun ProfileScreen(
     onNavigateToPrivacySecurity: () -> Unit = {},
     onNavigateToHelpSupport: () -> Unit = {},
     onNavigateToShareApp: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToOrderHistory: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val authRepository = AuthRepository.getInstance(context)
@@ -160,7 +162,8 @@ fun ProfileScreen(
                 onNavigateToPrivacySecurity = onNavigateToPrivacySecurity,
                 onNavigateToHelpSupport = onNavigateToHelpSupport,
                 onNavigateToShareApp = onNavigateToShareApp,
-                onNavigateToSettings = onNavigateToSettings
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToOrderHistory = onNavigateToOrderHistory
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
@@ -403,7 +406,8 @@ fun SettingsSection(
     onNavigateToPrivacySecurity: () -> Unit = {},
     onNavigateToHelpSupport: () -> Unit = {},
     onNavigateToShareApp: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToOrderHistory: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -414,6 +418,7 @@ fun SettingsSection(
         Column {
             val menuItems = listOf(
                 "Chỉnh sửa hồ sơ" to Icons.Default.Edit,
+                "Lịch sử đơn hàng" to Icons.Default.History,
                 "Thông báo" to Icons.Default.Notifications,
                 "Phương thức thanh toán" to Icons.Default.CreditCard,
                 "Quyền riêng tư & Bảo mật" to Icons.Default.Security,
@@ -429,6 +434,7 @@ fun SettingsSection(
                     onClick = {
                         when (text) {
                             "Chỉnh sửa hồ sơ" -> onEditProfile()
+                            "Lịch sử đơn hàng" -> onNavigateToOrderHistory()
                             "Thông báo" -> onNavigateToNotifications()
                             "Phương thức thanh toán" -> onNavigateToPaymentMethods()
                             "Quyền riêng tư & Bảo mật" -> onNavigateToPrivacySecurity()

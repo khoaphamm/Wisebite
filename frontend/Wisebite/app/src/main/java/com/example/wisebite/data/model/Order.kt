@@ -1,6 +1,8 @@
 package com.example.wisebite.data.model
 
 import com.google.gson.annotations.SerializedName
+import java.text.SimpleDateFormat
+import java.util.*
 
 data class Order(
     @SerializedName("id")
@@ -24,6 +26,9 @@ data class Order(
     @SerializedName("notes")
     val notes: String?,
     
+    @SerializedName("preferred_pickup_time")
+    val preferredPickupTime: String?,
+    
     @SerializedName("customer")
     val customer: User,
     
@@ -36,6 +41,23 @@ data class Order(
     // Convert string status to enum for UI
     val status: OrderStatus
         get() = OrderStatus.fromString(_status)
+        
+    // Helper for displaying pickup time
+    val pickupTimeDisplay: String
+        get() {
+            return try {
+                if (preferredPickupTime != null) {
+                    val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                    val outputFormat = SimpleDateFormat("HH:mm, dd/MM/yyyy", Locale.getDefault())
+                    val pickupDate = inputFormat.parse(preferredPickupTime)
+                    "Nhận lúc: ${outputFormat.format(pickupDate)}"
+                } else {
+                    "Thời gian nhận: Chưa chọn"
+                }
+            } catch (e: Exception) {
+                "Thời gian nhận: Không xác định"
+            }
+        }
 }
 
 data class OrderItem(
@@ -61,7 +83,10 @@ data class CreateOrderRequest(
     val deliveryAddress: String?,
     
     @SerializedName("notes")
-    val notes: String?
+    val notes: String?,
+    
+    @SerializedName("preferred_pickup_time")
+    val preferredPickupTime: String? // ISO format: yyyy-MM-dd'T'HH:mm:ss
 )
 
 data class CreateOrderItemRequest(

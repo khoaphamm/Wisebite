@@ -201,7 +201,8 @@ fun OrderDebugScreen() {
                                 )
                             ),
                             deliveryAddress = "Test Address",
-                            notes = "Debug test order with valid UUID"
+                            notes = "Debug test order with valid UUID",
+                            preferredPickupTime = null
                         )
                         orderViewModel.createOrder(testOrder)
                     },
@@ -226,7 +227,8 @@ fun OrderDebugScreen() {
                                 )
                             ),
                             deliveryAddress = "Test Address",
-                            notes = "Debug test order with invalid UUID"
+                            notes = "Debug test order with invalid UUID",
+                            preferredPickupTime = null
                         )
                         orderViewModel.createOrder(testOrder)
                     },

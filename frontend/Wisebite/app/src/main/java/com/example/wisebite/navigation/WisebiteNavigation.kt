@@ -21,6 +21,7 @@ import com.example.wisebite.ui.screen.HomeScreen
 import com.example.wisebite.ui.screen.LoginScreen
 import com.example.wisebite.ui.screen.MainScreen
 import com.example.wisebite.ui.screen.OrderDebugScreen
+import com.example.wisebite.ui.screen.OrderHistoryScreen
 import com.example.wisebite.ui.screen.PrivacySecurityScreen
 import com.example.wisebite.ui.screen.HelpSupportScreen
 import com.example.wisebite.ui.screen.ShareAppScreen
@@ -199,6 +200,9 @@ fun WisebiteNavigation(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Routes.SETTINGS)
+                },
+                onNavigateToOrderHistory = {
+                    navController.navigate(Routes.ORDER_HISTORY)
                 }
             )
         }
@@ -253,6 +257,18 @@ fun WisebiteNavigation(
         // Debug screen for testing order functionality
         composable(Routes.ORDER_DEBUG) {
             OrderDebugScreen()
+        }
+        
+        // Order History Screen
+        composable(Routes.ORDER_HISTORY) {
+            OrderHistoryScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToOrderDetails = { orderId ->
+                    navController.navigate("${Routes.ORDER_DETAILS}/$orderId")
+                }
+            )
         }
         
         // Profile sub-screens

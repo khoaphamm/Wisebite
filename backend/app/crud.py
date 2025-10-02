@@ -9,6 +9,7 @@ from sqlalchemy.sql import func as sqla_func
 from geoalchemy2.functions import ST_Distance_Sphere, ST_MakePoint, ST_X, ST_Y
 from geoalchemy2 import WKTElement
 from passlib.context import CryptContext
+from app.schemas.notification import NotificationCreate
 
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
@@ -656,6 +657,7 @@ def create_order(session: Session, order_create: OrderCreate, customer_id: uuid.
             status=OrderStatus.PENDING, # Default status for new orders
             delivery_address=order_create.delivery_address,
             notes=order_create.notes,
+            preferred_pickup_time=order_create.preferred_pickup_time,
             items=db_order_items
         )
         session.add(db_order)
@@ -663,6 +665,30 @@ def create_order(session: Session, order_create: OrderCreate, customer_id: uuid.
     # Commit the transaction if all steps succeeded
     session.commit()
     session.refresh(db_order)
+    
+    # Step 3: Send notification to merchant about new order
+    if primary_store_id:
+        try:
+            # Get store owner to send notification
+            store = session.get(Store, primary_store_id)
+            if store and store.owner_id:
+                customer = session.get(User, customer_id)
+                customer_name = customer.full_name if customer else "Khách hàng"
+                
+                pickup_time_str = ""
+                if order_create.preferred_pickup_time:
+                    pickup_time_str = f" vào lúc {order_create.preferred_pickup_time.strftime('%H:%M ngày %d/%m/%Y')}"
+                
+                notification_data = NotificationCreate(
+                    title="🛒 Đơn hàng mới!",
+                    message=f"{customer_name} đã đặt {len(db_order_items)} món từ cửa hàng của bạn{pickup_time_str}. Tổng tiền: {total_amount:,.0f}đ",
+                    is_important=True
+                )
+                
+                create_notification(session, notification_data, [store.owner_id])
+        except Exception as e:
+            # Don't fail the order if notification fails
+            print(f"Failed to send notification for order {db_order.id}: {e}")
     
     return db_order
 

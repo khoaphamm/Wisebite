@@ -17,6 +17,7 @@ object Routes {
     const val EDIT_PROFILE = "edit_profile"
     const val ORDER_DETAILS = "order_details"
     const val ORDER_CONFIRMATION = "order_confirmation"
+    const val ORDER_HISTORY = "order_history"
     const val ORDER_DEBUG = "order_debug"
     
     // Profile sub-screens

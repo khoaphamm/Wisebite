@@ -16,16 +16,10 @@ def get_available_stores(
     city: Optional[str] = Query(None, description="Filter by city")
 ):
     """
-    Get all stores that have active surprise bags available for customers.
+    Get all stores available for customers.
     """
-    # Get stores that have at least one active surprise bag
-    query = select(Store).join(SurpriseBag).where(
-        and_(
-            SurpriseBag.is_active == True,
-            SurpriseBag.quantity_available > 0,
-            SurpriseBag.available_until > datetime.utcnow()
-        )
-    ).distinct()
+    # Get all stores
+    query = select(Store)
     
     if city:
         query = query.where(Store.address.ilike(f"%{city}%"))
@@ -52,7 +46,7 @@ def get_store_surprise_bags(
     )
     
     if category:
-        query = query.where(SurpriseBag.bag_type == category)
+        query = query.where(SurpriseBag.bag_type.ilike(category))
     
     surprise_bags = session.exec(query).all()
     return surprise_bags
@@ -78,14 +72,15 @@ def get_all_surprise_bags(
             SurpriseBag.is_active == True,
             SurpriseBag.quantity_available > 0,
             SurpriseBag.available_until > now,
-            # Ensure pickup time is at least 5 minutes from now
-            SurpriseBag.pickup_start_time > now + timedelta(minutes=5)
+            # DEMO MODE: Allow pickup times far in the future for testing
+            # Changed from 5 minutes to allow any future pickup time
+            SurpriseBag.pickup_start_time > now - timedelta(days=365)  # Allow bags from up to a year ago for demo
         )
     )
     
     # Apply filters
     if category:
-        query = query.where(SurpriseBag.bag_type == category)
+        query = query.where(SurpriseBag.bag_type.ilike(category))
     
     if city:
         query = query.where(Store.address.ilike(f"%{city}%"))
@@ -122,8 +117,9 @@ def get_surprise_bag_details(
     if (not surprise_bag.is_active or 
         surprise_bag.quantity_available <= 0 or 
         surprise_bag.available_until <= now or
-        surprise_bag.pickup_start_time <= now + timedelta(minutes=5)):
-        raise HTTPException(status_code=400, detail="Surprise bag is no longer available")
+        # DEMO MODE: Allow pickup times far in the past for testing
+        surprise_bag.pickup_start_time <= now - timedelta(days=365)):
+        raise HTTPException(status_code=400, detail="Surprise bag is no longer available for demo (too old)")
     
     return surprise_bag
 

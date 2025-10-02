@@ -186,8 +186,8 @@ def test_surprise_bag(session: Session, test_store: Store) -> SurpriseBag:
         original_value=50000.0,
         discounted_price=25000.0,
         quantity_available=5,
-        pickup_start_time=now + timedelta(hours=1),
-        pickup_end_time=now + timedelta(hours=3),
+        pickup_start_time=now + timedelta(days=7),  # DEMO: 7 days from now for testing
+        pickup_end_time=now + timedelta(days=7, hours=2),  # DEMO: 7 days + 2 hours from now
         store_id=test_store.id
     )
     session.add(surprise_bag)

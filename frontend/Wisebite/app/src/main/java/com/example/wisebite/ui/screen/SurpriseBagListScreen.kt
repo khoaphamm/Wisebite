@@ -47,7 +47,8 @@ data class SurpriseBagListUiState(
 )
 
 class SurpriseBagListViewModel(
-    private val repository: SurpriseBagRepository
+    private val repository: SurpriseBagRepository,
+    private val storeId: String? = null
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(SurpriseBagListUiState())
@@ -61,13 +62,25 @@ class SurpriseBagListViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
-            android.util.Log.d("SurpriseBagListViewModel", "Loading surprise bags data...")
+            android.util.Log.d("SurpriseBagListViewModel", "Loading surprise bags data for storeId: $storeId")
             val categoriesResult = repository.getAvailableCategories()
-            val bagsResult = repository.getAllSurpriseBags(
-                category = if (_uiState.value.selectedCategory == "Tất cả") null else _uiState.value.selectedCategory,
-                city = null, // Remove city filter temporarily
-                maxPrice = _uiState.value.maxPrice
-            )
+            
+            val bagsResult = if (storeId != null) {
+                // Load bags for specific store
+                android.util.Log.d("SurpriseBagListViewModel", "Loading bags for store: $storeId")
+                repository.getStoreSurpriseBags(
+                    storeId = storeId,
+                    category = if (_uiState.value.selectedCategory == "Tất cả") null else _uiState.value.selectedCategory
+                )
+            } else {
+                // Load all bags
+                android.util.Log.d("SurpriseBagListViewModel", "Loading all surprise bags")
+                repository.getAllSurpriseBags(
+                    category = if (_uiState.value.selectedCategory == "Tất cả") null else _uiState.value.selectedCategory,
+                    city = null, // Remove city filter temporarily
+                    maxPrice = _uiState.value.maxPrice
+                )
+            }
             
             android.util.Log.d("SurpriseBagListViewModel", "Categories result: $categoriesResult")
             android.util.Log.d("SurpriseBagListViewModel", "Bags result: $bagsResult")
@@ -80,7 +93,7 @@ class SurpriseBagListViewModel(
                 surpriseBags = if (bagsResult is ApiResult.Success) {
                     android.util.Log.d("SurpriseBagListViewModel", "Successfully loaded ${bagsResult.data.size} surprise bags")
                     bagsResult.data.forEach { bag ->
-                        android.util.Log.d("SurpriseBagListViewModel", "Bag: ${bag.name} - ${bag.originalValue} -> ${bag.discountedPrice}")
+                        android.util.Log.d("SurpriseBagListViewModel", "Bag: ${bag.name} - Store: ${bag.store?.name}")
                     }
                     bagsResult.data
                 } else {
@@ -117,7 +130,7 @@ fun SurpriseBagListScreen(
 ) {
     val context = LocalContext.current
     val repository = SurpriseBagRepository.getInstance(context)
-    val viewModel = remember { SurpriseBagListViewModel(repository) }
+    val viewModel = remember(storeId) { SurpriseBagListViewModel(repository, storeId) }
     val uiState by viewModel.uiState.collectAsState()
     
     // Show error dialog
@@ -143,7 +156,13 @@ fun SurpriseBagListScreen(
         TopAppBar(
             title = {
                 Text(
-                    text = if (storeId != null) "Surprise Bags" else "Tất cả Surprise Bags",
+                    text = if (storeId != null) {
+                        // Try to get store name from the first bag, otherwise use generic title
+                        val storeName = uiState.surpriseBags.firstOrNull()?.store?.name
+                        if (storeName != null) "Surprise Bags - $storeName" else "Surprise Bags cửa hàng"
+                    } else {
+                        "Tất cả Surprise Bags"
+                    },
                     fontWeight = FontWeight.Bold,
                     color = Green700
                 )

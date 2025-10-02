@@ -60,9 +60,9 @@ def create_random_surprise_bag_data(store_id: Optional[str] = None) -> Dict[str,
     """Generate random surprise bag data for testing."""
     random_id = str(uuid.uuid4())[:8]
     now = datetime.now()
-    # Create a pickup window that's currently active for testing
-    pickup_start = now - timedelta(hours=random.randint(1, 2))  # Started 1-2 hours ago
-    pickup_end = now + timedelta(hours=random.randint(4, 8))     # Ends 4-8 hours from now
+    # DEMO MODE: Create a pickup window far in the future for testing
+    pickup_start = now + timedelta(days=random.randint(1, 30))  # Start 1-30 days from now  
+    pickup_end = now + timedelta(days=random.randint(1, 30), hours=random.randint(4, 8))     # Ends 4-8 hours after start
     
     # Ensure pricing constraint: discounted_price < original_value
     original_value = round(random.uniform(30000, 150000), 2)

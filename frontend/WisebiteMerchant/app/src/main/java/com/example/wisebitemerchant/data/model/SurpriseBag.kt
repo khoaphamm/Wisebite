@@ -25,7 +25,8 @@ data class SurpriseBag(
     val isAvailableForPickup: Boolean
         get() {
             val now = Date()
-            return now.after(pickupStartTime) && now.before(pickupEndTime) && quantityAvailable > 0
+            // DEMO MODE: More lenient availability checking for demo purposes
+            return quantityAvailable > 0 && (now.before(pickupEndTime) || pickupEndTime.time > now.time - 24 * 60 * 60 * 1000) // Allow 24 hours after end time for demo
         }
     
     val timeDisplayText: String
@@ -63,12 +64,12 @@ object SurpriseBagCategories {
     }
 }
 
-// Time window constraints
+// Time window constraints - DEMO MODE: More permissive hours
 object SurpriseBagTimeWindows {
-    const val ORDER_START_HOUR = 14 // 2 PM
-    const val ORDER_END_HOUR = 18   // 6 PM
-    const val PICKUP_START_HOUR = 14 // 2 PM  
-    const val PICKUP_END_HOUR = 20   // 8 PM
+    const val ORDER_START_HOUR = 0  // 12 AM - Allow all day for demo
+    const val ORDER_END_HOUR = 23   // 11 PM - Allow all day for demo
+    const val PICKUP_START_HOUR = 0 // 12 AM - Allow all day for demo
+    const val PICKUP_END_HOUR = 23  // 11 PM - Allow all day for demo
     
     const val MIN_DISCOUNT_PERCENTAGE = 45.0 // Minimum 45% discount
     const val COMMISSION_PERCENTAGE = 5.0    // 5% commission included

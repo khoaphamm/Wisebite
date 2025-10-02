@@ -23,7 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wisebite.data.model.Order
 import com.example.wisebite.data.model.OrderItem
 import com.example.wisebite.data.model.OrderStatus
-import com.example.wisebite.ui.screen.OrderStatusChip
+import com.example.wisebite.ui.component.OrderStatusChip
 import com.example.wisebite.ui.theme.*
 import com.example.wisebite.ui.viewmodel.OrderViewModel
 import com.example.wisebite.util.ViewModelFactory

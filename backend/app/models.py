@@ -247,6 +247,7 @@ class Order(SQLModel, table=True):
     total_amount: float | None = Field(default=None)
     delivery_address: Optional[str] = Field(default=None, max_length=500)
     notes: Optional[str] = Field(default=None, max_length=500)
+    preferred_pickup_time: Optional[datetime] = Field(default=None)  # Customer's preferred pickup time
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now, sa_column_kwargs={"onupdate": func.now()})
 

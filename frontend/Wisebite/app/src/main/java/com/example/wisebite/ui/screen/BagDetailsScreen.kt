@@ -1,6 +1,8 @@
 package com.example.wisebite.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,7 +30,9 @@ import com.example.wisebite.data.model.SurpriseBag
 import com.example.wisebite.data.repository.ApiResult
 import com.example.wisebite.data.repository.SurpriseBagRepository
 import com.example.wisebite.ui.theme.*
+import com.example.wisebite.ui.component.TimePickerDialog
 import com.example.wisebite.ui.viewmodel.OrderViewModel
+import com.example.wisebite.util.PickupTimeValidator
 import com.example.wisebite.util.ViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.*
@@ -54,6 +58,9 @@ fun BagDetailsScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var quantity by remember { mutableStateOf(1) }
     var selectedPickupTime by remember { mutableStateOf("") }
+    var selectedPickupTimeFormatted by remember { mutableStateOf<Date?>(null) }
+    var showTimePickerDialog by remember { mutableStateOf(false) }
+    var pickupTimeError by remember { mutableStateOf<String?>(null) }
     var deliveryAddress by remember { mutableStateOf("") }
     var orderNotes by remember { mutableStateOf("") }
     
@@ -65,6 +72,14 @@ fun BagDetailsScreen(
                 surpriseBag = result.data
                 selectedPickupTime = result.data.pickupTimeDisplay
                 deliveryAddress = result.data.store?.displayAddress ?: ""
+                
+                // DEMO MODE: Set a default pickup time for easier testing
+                // Set it to the current time + 1 hour for demo purposes
+                val calendar = Calendar.getInstance()
+                calendar.add(Calendar.HOUR_OF_DAY, 1)
+                selectedPickupTimeFormatted = calendar.time
+                selectedPickupTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(calendar.time)
+                
                 isLoadingBag = false
             }
             is ApiResult.Error -> {
@@ -430,6 +445,87 @@ fun BagDetailsScreen(
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
+                    // Pickup time selector
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Thời gian nhận hàng mong muốn",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showTimePickerDialog = true
+                                    },
+                                shape = RoundedCornerShape(4.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                border = BorderStroke(1.dp, WarmGrey300)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (selectedPickupTime.isNotEmpty()) {
+                                            "Nhận lúc: $selectedPickupTime hôm nay"
+                                        } else if (selectedPickupTimeFormatted != null) {
+                                            "Nhận lúc: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectedPickupTimeFormatted)} hôm nay"
+                                        } else {
+                                            "Chọn thời gian nhận hàng"
+                                        },
+                                        fontSize = 16.sp,
+                                        color = if (selectedPickupTime.isNotEmpty() || selectedPickupTimeFormatted != null) {
+                                            Color.Black
+                                        } else {
+                                            WarmGrey600
+                                        }
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Schedule,
+                                        contentDescription = "Pick time",
+                                        tint = Green500
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Text(
+                                text = "Khung giờ có thể nhận: ${surpriseBag?.pickupTimeDisplay ?: ""}",
+                                fontSize = 12.sp,
+                                color = WarmGrey600
+                            )
+                            
+                            // Show pickup time validation error
+                            pickupTimeError?.let { error ->
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = error,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
                     // Order notes
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -468,6 +564,10 @@ fun BagDetailsScreen(
                     // Order button
                     Button(
                         onClick = {
+                            val pickupTimeIso = selectedPickupTimeFormatted?.let { pickupTime ->
+                                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(pickupTime)
+                            }
+                            
                             val orderRequest = CreateOrderRequest(
                                 items = listOf(
                                     CreateOrderItemRequest(
@@ -477,7 +577,8 @@ fun BagDetailsScreen(
                                     )
                                 ),
                                 deliveryAddress = deliveryAddress,
-                                notes = orderNotes.takeIf { it.isNotBlank() } ?: "Đặt từ chi tiết Surprise Bag"
+                                notes = orderNotes.takeIf { it.isNotBlank() } ?: "Đặt từ chi tiết Surprise Bag",
+                                preferredPickupTime = pickupTimeIso
                             )
                             orderViewModel.createOrder(orderRequest)
                         },
@@ -513,6 +614,55 @@ fun BagDetailsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+        }
+        
+        // Time Picker Dialog
+        surpriseBag?.let { bag ->
+            TimePickerDialog(
+                title = "Chọn thời gian nhận hàng",
+                isVisible = showTimePickerDialog,
+                pickupStartTime = bag.pickupStartTime,
+                pickupEndTime = bag.pickupEndTime,
+                selectedTime = selectedPickupTime,
+                onTimeSelected = { time ->
+                    pickupTimeError = null
+                    
+                    // Validate the selected time
+                    surpriseBag?.let { bag ->
+                        val validationResult = PickupTimeValidator.validatePickupTime(
+                            selectedTime = time,
+                            pickupStartTime = bag.pickupStartTime,
+                            pickupEndTime = bag.pickupEndTime
+                        )
+                        
+                        if (validationResult.isValid) {
+                            // Also validate it's not in the past
+                            val pastValidation = PickupTimeValidator.validateNotInPast(time)
+                            if (pastValidation.isValid) {
+                                selectedPickupTime = time
+                                // Create a Date object for the selected time (today's date with selected time)
+                                try {
+                                    val today = Calendar.getInstance()
+                                    val timeParts = time.split(":")
+                                    today.set(Calendar.HOUR_OF_DAY, timeParts[0].toInt())
+                                    today.set(Calendar.MINUTE, timeParts[1].toInt())
+                                    selectedPickupTimeFormatted = today.time
+                                } catch (e: Exception) {
+                                    selectedPickupTimeFormatted = null
+                                }
+                                showTimePickerDialog = false
+                            } else {
+                                pickupTimeError = pastValidation.errorMessage
+                            }
+                        } else {
+                            pickupTimeError = validationResult.errorMessage
+                        }
+                    }
+                },
+                onDismiss = {
+                    showTimePickerDialog = false
+                }
+            )
         }
     }
 }

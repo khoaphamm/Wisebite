@@ -33,6 +33,7 @@ class OrderCreate(SQLModel):
     items: List[OrderItemCreate]
     delivery_address: Optional[str] = None
     notes: Optional[str] = None
+    preferred_pickup_time: Optional[datetime] = None  # Customer's preferred pickup time
 
 # --- PUBLIC RESPONSE SCHEMAS (REWRITTEN for WiseBite) ---
 
@@ -50,6 +51,7 @@ class OrderPublic(SQLModel):
     created_at: datetime
     delivery_address: Optional[str] = None  # Delivery address
     notes: Optional[str] = None  # Order notes
+    preferred_pickup_time: Optional[datetime] = None  # Customer's preferred pickup time
     customer: UserPublic # Nested customer details
     items: List[OrderItemPublic]
 

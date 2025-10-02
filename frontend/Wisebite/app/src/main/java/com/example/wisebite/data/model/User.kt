@@ -1,7 +1,6 @@
 package com.example.wisebite.data.model
 
 import com.google.gson.annotations.SerializedName
-
 import com.example.wisebite.ui.component.CountryCode
 import java.util.Date
 
@@ -76,17 +75,6 @@ data class LoginResponse(
     
     @SerializedName("expires_in")
     val expiresIn: Int? = null // Token lifetime in seconds
-)
-
-data class ApiResponse<T>(
-    @SerializedName("data")
-    val data: T?,
-    
-    @SerializedName("message")
-    val message: String?,
-    
-    @SerializedName("detail")
-    val detail: String? // For error responses
 )
 
 // UI State models

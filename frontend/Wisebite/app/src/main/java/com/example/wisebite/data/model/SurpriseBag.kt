@@ -84,29 +84,23 @@ data class SurpriseBag(
         }
     
     val categoryDisplayName: String
-        get() = when (bagType) {
-            "Combo" -> "Combo (Tổng hợp)"
-            "Thịt/Cá" -> "Thịt/Cá"
-            "Rau/Củ" -> "Rau/Củ"
-            "Trái cây" -> "Trái cây"
-            "Bánh mì" -> "Bánh mì"
-            else -> bagType
+        get() = when (bagType.lowercase()) {
+            "combo" -> "Combo"
+            "thịt/cá", "thit/ca" -> "Thịt/Cá"
+            "rau/củ", "rau/cu" -> "Rau/Củ"
+            "trái cây", "trai cay" -> "Trái cây"
+            "bánh mì", "banh mi" -> "Bánh mì"
+            else -> bagType.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         }
     
     val isAvailable: Boolean
         get() {
-            val now = Date()
             return try {
-                val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-                val availableUntilDate = inputFormat.parse(availableUntil)
-                val pickupStartDate = inputFormat.parse(pickupStartTime)
-                
-                isActive && 
-                quantityAvailable > 0 && 
-                availableUntilDate?.after(now) == true &&
-                pickupStartDate?.after(Date(now.time + 5 * 60 * 1000)) == true // 5 minutes from now
+                // DEMO MODE: Always available if active and has quantity, ignore time constraints
+                isActive && quantityAvailable > 0
             } catch (e: Exception) {
-                false
+                // Even if there's an exception, try to make it available for demo
+                quantityAvailable > 0
             }
         }
 }

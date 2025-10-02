@@ -29,7 +29,8 @@ fun MainScreen(
     onNavigateToPrivacySecurity: () -> Unit = {},
     onNavigateToHelpSupport: () -> Unit = {},
     onNavigateToShareApp: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToOrderHistory: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     
@@ -105,7 +106,8 @@ fun MainScreen(
                     onNavigateToPrivacySecurity = onNavigateToPrivacySecurity,
                     onNavigateToHelpSupport = onNavigateToHelpSupport,
                     onNavigateToShareApp = onNavigateToShareApp,
-                    onNavigateToSettings = onNavigateToSettings
+                    onNavigateToSettings = onNavigateToSettings,
+                    onNavigateToOrderHistory = onNavigateToOrderHistory
                 )
             }
             

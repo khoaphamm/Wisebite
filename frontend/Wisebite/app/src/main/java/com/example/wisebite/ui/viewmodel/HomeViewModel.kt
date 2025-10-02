@@ -41,7 +41,9 @@ class HomeViewModel(
             val storesResult = surpriseBagRepository.getAvailableStores(null)
             val categoriesResult = surpriseBagRepository.getAvailableCategories()
             val bagsResult = surpriseBagRepository.getAllSurpriseBags(
-                city = null
+                category = null,
+                city = null,
+                maxPrice = null
             )
             
             // Log results for debugging
@@ -85,17 +87,21 @@ class HomeViewModel(
             viewModelScope.launch {
                 _uiState.value = _uiState.value.copy(isLoading = true)
                 
+                android.util.Log.d("HomeViewModel", "Filtering by category: $category")
                 when (val result = surpriseBagRepository.getAllSurpriseBags(
                     category = category,
-                    city = _uiState.value.selectedCity
+                    city = null, // Remove city filter to avoid mismatch issues
+                    maxPrice = null
                 )) {
                     is ApiResult.Success -> {
+                        android.util.Log.d("HomeViewModel", "Filtered bags: ${result.data.size} found")
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             featuredSurpriseBags = result.data.take(5)
                         )
                     }
                     is ApiResult.Error -> {
+                        android.util.Log.e("HomeViewModel", "Error filtering bags: ${result.message}")
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             errorMessage = result.message
