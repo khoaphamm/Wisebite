@@ -55,8 +55,9 @@ fun EnhancedOrdersScreen() {
     val notifications by notificationService.notifications.collectAsStateWithLifecycle(initialValue = null)
     
     // Mock orders data - replace with actual ViewModel
+    // Using mutableStateListOf to allow updates
     val mockOrders = remember {
-        listOf(
+        mutableStateListOf(
             MerchantOrder(
                 id = "ORD001",
                 customerName = "Nguyễn Văn A",
@@ -82,6 +83,14 @@ fun EnhancedOrdersScreen() {
                 pickupTime = "14:00"
             )
         )
+    }
+    
+    // Handler to update order status
+    val updateOrderStatus: (String, MerchantOrderStatus) -> Unit = { orderId, newStatus ->
+        val index = mockOrders.indexOfFirst { it.id == orderId }
+        if (index != -1) {
+            mockOrders[index] = mockOrders[index].copy(status = newStatus)
+        }
     }
     
     // Show notification snackbar
@@ -152,18 +161,32 @@ fun EnhancedOrdersScreen() {
         
         // Content based on selected tab
         when (selectedTabIndex) {
-            0 -> NewOrdersContent(mockOrders.filter { it.status == MerchantOrderStatus.NEW })
-            1 -> ProcessingOrdersContent(mockOrders.filter { 
-                it.status == MerchantOrderStatus.CONFIRMED || it.status == MerchantOrderStatus.PREPARING 
-            })
-            2 -> ReadyOrdersContent(mockOrders.filter { it.status == MerchantOrderStatus.READY })
+            0 -> NewOrdersContent(
+                orders = mockOrders.filter { it.status == MerchantOrderStatus.NEW },
+                onAccept = { orderId -> updateOrderStatus(orderId, MerchantOrderStatus.CONFIRMED) },
+                onReject = { orderId -> updateOrderStatus(orderId, MerchantOrderStatus.CANCELLED) }
+            )
+            1 -> ProcessingOrdersContent(
+                orders = mockOrders.filter { 
+                    it.status == MerchantOrderStatus.CONFIRMED || it.status == MerchantOrderStatus.PREPARING 
+                },
+                onMarkReady = { orderId -> updateOrderStatus(orderId, MerchantOrderStatus.READY) }
+            )
+            2 -> ReadyOrdersContent(
+                orders = mockOrders.filter { it.status == MerchantOrderStatus.READY },
+                onMarkCompleted = { orderId -> updateOrderStatus(orderId, MerchantOrderStatus.COMPLETED) }
+            )
             3 -> CompletedOrdersContent(mockOrders.filter { it.status == MerchantOrderStatus.COMPLETED })
         }
     }
 }
 
 @Composable
-fun NewOrdersContent(orders: List<MerchantOrder>) {
+fun NewOrdersContent(
+    orders: List<MerchantOrder>,
+    onAccept: (String) -> Unit,
+    onReject: (String) -> Unit
+) {
     if (orders.isEmpty()) {
         EmptyOrdersState(
             icon = Icons.Default.Receipt,
@@ -179,8 +202,8 @@ fun NewOrdersContent(orders: List<MerchantOrder>) {
             items(orders) { order ->
                 NewOrderCard(
                     order = order,
-                    onAccept = { /* Handle accept */ },
-                    onReject = { /* Handle reject */ }
+                    onAccept = { onAccept(order.id) },
+                    onReject = { onReject(order.id) }
                 )
             }
         }
@@ -188,7 +211,10 @@ fun NewOrdersContent(orders: List<MerchantOrder>) {
 }
 
 @Composable
-fun ProcessingOrdersContent(orders: List<MerchantOrder>) {
+fun ProcessingOrdersContent(
+    orders: List<MerchantOrder>,
+    onMarkReady: (String) -> Unit
+) {
     if (orders.isEmpty()) {
         EmptyOrdersState(
             icon = Icons.Default.Timelapse,
@@ -204,7 +230,7 @@ fun ProcessingOrdersContent(orders: List<MerchantOrder>) {
             items(orders) { order ->
                 ProcessingOrderCard(
                     order = order,
-                    onMarkReady = { /* Handle mark ready */ }
+                    onMarkReady = { onMarkReady(order.id) }
                 )
             }
         }
@@ -212,7 +238,10 @@ fun ProcessingOrdersContent(orders: List<MerchantOrder>) {
 }
 
 @Composable
-fun ReadyOrdersContent(orders: List<MerchantOrder>) {
+fun ReadyOrdersContent(
+    orders: List<MerchantOrder>,
+    onMarkCompleted: (String) -> Unit
+) {
     if (orders.isEmpty()) {
         EmptyOrdersState(
             icon = Icons.Default.CheckCircle,
@@ -228,7 +257,7 @@ fun ReadyOrdersContent(orders: List<MerchantOrder>) {
             items(orders) { order ->
                 ReadyOrderCard(
                     order = order,
-                    onMarkCompleted = { /* Handle mark completed */ }
+                    onMarkCompleted = { onMarkCompleted(order.id) }
                 )
             }
         }
@@ -463,6 +492,8 @@ fun ReadyOrderCard(
     order: MerchantOrder,
     onMarkCompleted: () -> Unit
 ) {
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -478,7 +509,7 @@ fun ReadyOrderCard(
             Spacer(modifier = Modifier.height(16.dp))
             
             Button(
-                onClick = onMarkCompleted,
+                onClick = { showConfirmDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Blue600
@@ -487,6 +518,60 @@ fun ReadyOrderCard(
                 Text("Xác nhận đã nhận")
             }
         }
+    }
+    
+    // Confirmation Dialog
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Xác nhận hoàn thành đơn hàng",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Bạn có chắc chắn muốn đánh dấu đơn hàng #${order.id} đã được khách hàng nhận không?",
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Khách hàng: ${order.customerName}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = WarmGrey800
+                    )
+                    Text(
+                        text = "Tổng tiền: ${NumberFormat.getCurrencyInstance(Locale("vi", "VN")).format(order.totalAmount)}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Green600
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onMarkCompleted()
+                        showConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Blue600
+                    )
+                ) {
+                    Text("Xác nhận")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showConfirmDialog = false }
+                ) {
+                    Text("Hủy")
+                }
+            }
+        )
     }
 }
 
