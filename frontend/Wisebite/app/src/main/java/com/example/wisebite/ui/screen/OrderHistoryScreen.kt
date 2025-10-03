@@ -223,7 +223,7 @@ private fun OrderHistoryCard(
             
             // Order items summary
             Text(
-                text = "${order.items.size} món được đặt",
+                text = "${order.items?.size ?: 0} món được đặt",
                 fontSize = 14.sp,
                 color = WarmGrey600
             )

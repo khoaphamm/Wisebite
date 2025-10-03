@@ -30,7 +30,10 @@ import com.example.wisebitemerchant.ui.component.MerchantInputField
 import com.example.wisebitemerchant.ui.theme.*
 import com.example.wisebitemerchant.ui.viewmodel.LoginViewModel
 import com.example.wisebitemerchant.util.ViewModelFactory
+import com.example.wisebitemerchant.service.MerchantNotificationService
+import com.example.wisebitemerchant.data.manager.TokenManager
 import android.app.Activity
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun LoginScreen(
@@ -44,9 +47,24 @@ fun LoginScreen(
     // Lấy context và ép kiểu an toàn sang Activity
     val context = LocalContext.current
     val activity = context as? Activity
-    // Handle successful login
+    
+    // Initialize notification service
+    val notificationService = remember { MerchantNotificationService.getInstance(context) }
+    val tokenManager = remember { TokenManager.getInstance(context) }
+    
+    // Handle successful login and start notification service
     LaunchedEffect(isLoginSuccessful) {
         if (isLoginSuccessful) {
+            try {
+                // Get the saved token and start notification service
+                val token = tokenManager.getToken().first()
+                if (!token.isNullOrEmpty()) {
+                    notificationService.startNotificationService(token)
+                    android.util.Log.d("LoginScreen", "Notification service started successfully")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LoginScreen", "Failed to start notification service", e)
+            }
             onLoginSuccess()
         }
     }

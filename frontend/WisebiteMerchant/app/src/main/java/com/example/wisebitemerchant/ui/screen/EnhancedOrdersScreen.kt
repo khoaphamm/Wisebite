@@ -94,6 +94,35 @@ fun EnhancedOrdersScreen() {
     val readyOrders = orderViewModel.getReadyOrders()
     val completedOrders = orderViewModel.getCompletedOrders()
     
+    // Listen for real-time notifications from the notification service
+    LaunchedEffect(Unit) {
+        notificationService.notifications.collect { notification ->
+            Log.d("EnhancedOrdersScreen", "Received notification: ${notification.title}")
+            // Refresh orders when we get a new order notification
+            if (notification.type == com.example.wisebitemerchant.service.MerchantNotificationType.NEW_ORDER) {
+                orderViewModel.loadOrders()
+            }
+        }
+    }
+    
+    // Trigger notification for new orders (simulate when orders refresh and we detect new ones)
+    var previousNewOrdersCount by remember { mutableIntStateOf(newOrders.size) }
+    LaunchedEffect(newOrders.size) {
+        if (newOrders.size > previousNewOrdersCount) {
+            // New order detected!
+            val newOrder = newOrders.firstOrNull()
+            newOrder?.let { order ->
+                notificationService.simulateNewOrderNotification(
+                    orderId = order.id,
+                    customerName = order.customerName,
+                    itemCount = order.items?.size ?: 0,
+                    totalAmount = order.totalAmount
+                )
+            }
+        }
+        previousNewOrdersCount = newOrders.size
+    }
+    
     val tabs = listOf(
         "Mới (${newOrders.size})",
         "Đang xử lý (${processingOrders.size})",
@@ -127,14 +156,17 @@ fun EnhancedOrdersScreen() {
                 
                 Box {
                     IconButton(onClick = { 
-                        // Test notification
+                        // Test notification with more realistic data
                         notificationService.simulateNewOrderNotification(
-                            "TEST001", "Khách hàng mới", 2, 50000.0
+                            orderId = "ORDER${System.currentTimeMillis()}",
+                            customerName = "Nguyễn Văn A", 
+                            itemCount = 3, 
+                            totalAmount = 125000.0
                         )
                     }) {
                         Icon(
                             imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications"
+                            contentDescription = "Test Notifications"
                         )
                     }
                     // Red dot for new notifications  
@@ -175,7 +207,18 @@ fun EnhancedOrdersScreen() {
         when (selectedTabIndex) {
             0 -> NewOrdersContent(
                 orders = newOrders,
-                onAccept = { orderId -> orderViewModel.acceptOrder(orderId) },
+                onAccept = { orderId -> 
+                    orderViewModel.acceptOrder(orderId)
+                    // Trigger local notification for demo purposes
+                    val order = newOrders.find { it.id == orderId }
+                    order?.let {
+                        notificationService.simulateOrderAccepted(
+                            orderId = it.id,
+                            customerName = it.customerName,
+                            itemCount = it.items?.size ?: 0
+                        )
+                    }
+                },
                 onReject = { orderId -> orderViewModel.rejectOrder(orderId) }
             )
             1 -> ProcessingOrdersContent(

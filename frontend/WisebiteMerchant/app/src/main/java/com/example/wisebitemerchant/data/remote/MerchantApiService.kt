@@ -26,19 +26,19 @@ interface MerchantApiService {
     @GET("api/v1/stores/me")
     suspend fun getMyStore(@Header("Authorization") token: String): Response<Store>
     
-    @POST("stores")
+    @POST("api/v1/stores")
     suspend fun createStore(
         @Header("Authorization") token: String,
         @Body request: StoreCreateRequest
     ): Response<Store>
     
-    @PATCH("user/me")
+    @PATCH("api/v1/user/me")
     suspend fun updateProfile(
         @Header("Authorization") token: String,
         @Body request: MerchantUser
     ): Response<MerchantUser>
     
-    @PATCH("stores/me")
+    @PATCH("api/v1/stores/me")
     suspend fun updateStore(
         @Header("Authorization") token: String,
         @Body request: Store

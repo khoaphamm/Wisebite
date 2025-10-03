@@ -165,8 +165,10 @@ private fun OrderDetailsContent(
             )
         }
 
-        items(order.items) { item ->
-            OrderItemCard(item = item)
+        order.items?.let { itemsList ->
+            items(itemsList) { item ->
+                OrderItemCard(item = item)
+            }
         }
 
         // Order Summary
@@ -354,7 +356,7 @@ private fun OrderSummaryCard(order: Order) {
                     color = WarmGrey600
                 )
                 Text(
-                    text = "${order.items.size}",
+                    text = "${order.items?.size ?: 0}",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = WarmGrey800

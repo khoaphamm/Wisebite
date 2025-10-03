@@ -28,8 +28,8 @@ class ViewModelFactory private constructor(private val context: Context) : ViewM
     }
     
     private val tokenManager = TokenManager.getInstance(context)
-    private val authRepository = AuthRepository.getInstance(RetrofitClient.apiService, tokenManager)
-    private val storeRepository = StoreRepository.getInstance(RetrofitClient.apiService, tokenManager)
+    private val authRepository = AuthRepository.getInstance(RetrofitClient.merchantApiService, tokenManager)
+    private val storeRepository = StoreRepository.getInstance(RetrofitClient.merchantApiService, tokenManager)
     
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

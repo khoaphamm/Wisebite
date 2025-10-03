@@ -50,7 +50,7 @@ data class Order(
                     val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
                     val outputFormat = SimpleDateFormat("HH:mm, dd/MM/yyyy", Locale.getDefault())
                     val pickupDate = inputFormat.parse(preferredPickupTime)
-                    "Nhận lúc: ${outputFormat.format(pickupDate)}"
+                    "Nhận lúc: ${outputFormat.format(pickupDate ?: Date())}"
                 } else {
                     "Thời gian nhận: Chưa chọn"
                 }

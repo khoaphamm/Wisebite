@@ -24,9 +24,9 @@ interface NotificationApiService {
     
     /**
      * Mark a notification as read
-     * Uses user endpoint: PUT /user/read/{notification_id}
+     * Uses user endpoint: POST /api/v1/user/read/{notification_id}
      */
-    @PUT("api/v1/user/read/{notification_id}")
+    @POST("api/v1/user/read/{notification_id}")
     suspend fun markNotificationAsRead(
         @Header("Authorization") authToken: String,
         @Path("notification_id") notificationId: String
