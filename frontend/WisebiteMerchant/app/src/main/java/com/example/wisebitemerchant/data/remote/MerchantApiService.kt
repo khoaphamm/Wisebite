@@ -26,7 +26,23 @@ interface MerchantApiService {
     @GET("stores/me")
     suspend fun getMyStore(@Header("Authorization") token: String): Response<Store>
     
-    // Store management endpoints will be added later
+    @POST("stores")
+    suspend fun createStore(
+        @Header("Authorization") token: String,
+        @Body request: StoreCreateRequest
+    ): Response<Store>
+    
+    @PATCH("user/me")
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body request: MerchantUser
+    ): Response<MerchantUser>
+    
+    @PATCH("stores/me")
+    suspend fun updateStore(
+        @Header("Authorization") token: String,
+        @Body request: Store
+    ): Response<Store>
     
     // Order management endpoints will be added later
     

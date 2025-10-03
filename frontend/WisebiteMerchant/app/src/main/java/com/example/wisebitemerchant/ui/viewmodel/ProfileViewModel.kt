@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.wisebitemerchant.data.model.MerchantUser
 import com.example.wisebitemerchant.data.model.Store
 import com.example.wisebitemerchant.data.repository.AuthRepository
+import com.example.wisebitemerchant.data.repository.StoreRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +19,8 @@ data class ProfileUiState(
 )
 
 class ProfileViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val storeRepository: StoreRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -50,7 +52,7 @@ class ProfileViewModel(
     
     private fun loadStoreData() {
         viewModelScope.launch {
-            authRepository.getMyStore()
+            storeRepository.getMyStore()
                 .onSuccess { store ->
                     _uiState.value = _uiState.value.copy(
                         store = store,
