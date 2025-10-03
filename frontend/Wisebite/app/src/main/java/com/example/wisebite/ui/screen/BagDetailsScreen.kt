@@ -24,6 +24,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import com.example.wisebite.data.model.CreateOrderItemRequest
 import com.example.wisebite.data.model.CreateOrderRequest
 import com.example.wisebite.data.model.SurpriseBag
@@ -67,26 +70,41 @@ fun BagDetailsScreen(
     // Load surprise bag details
     LaunchedEffect(bagId) {
         isLoadingBag = true
-        when (val result = surpriseBagRepository.getSurpriseBagDetails(bagId)) {
-            is ApiResult.Success -> {
-                surpriseBag = result.data
-                selectedPickupTime = result.data.pickupTimeDisplay
-                deliveryAddress = result.data.store?.displayAddress ?: ""
-                
-                // DEMO MODE: Set a default pickup time for easier testing
-                // Set it to the current time + 1 hour for demo purposes
-                val calendar = Calendar.getInstance()
-                calendar.add(Calendar.HOUR_OF_DAY, 1)
-                selectedPickupTimeFormatted = calendar.time
-                selectedPickupTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(calendar.time)
-                
-                isLoadingBag = false
+        errorMessage = null
+        try {
+            val result = surpriseBagRepository.getSurpriseBagDetails(bagId)
+            
+            // Only update state if the coroutine is still active (not cancelled)
+            if (isActive) {
+                when (result) {
+                    is ApiResult.Success -> {
+                        surpriseBag = result.data
+                        selectedPickupTime = result.data.pickupTimeDisplay
+                        deliveryAddress = result.data.store?.displayAddress ?: ""
+                        
+                        // DEMO MODE: Set a default pickup time for easier testing
+                        // Set it to the current time + 1 hour for demo purposes
+                        val calendar = Calendar.getInstance()
+                        calendar.add(Calendar.HOUR_OF_DAY, 1)
+                        selectedPickupTimeFormatted = calendar.time
+                        selectedPickupTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(calendar.time)
+                        
+                        isLoadingBag = false
+                    }
+                    is ApiResult.Error -> {
+                        errorMessage = "Lỗi tải dữ liệu: ${result.message}"
+                        isLoadingBag = false
+                    }
+                    else -> {
+                        errorMessage = "Không thể tải dữ liệu surprise bag"
+                        isLoadingBag = false
+                    }
+                }
             }
-            is ApiResult.Error -> {
-                errorMessage = result.message
-                isLoadingBag = false
-            }
-            else -> {
+        } catch (e: Exception) {
+            // Only update error state if coroutine is still active
+            if (isActive && e !is CancellationException) {
+                errorMessage = "Lỗi không xác định: ${e.message}"
                 isLoadingBag = false
             }
         }
@@ -141,9 +159,15 @@ fun BagDetailsScreen(
         )
     }
 
-    // Monitor order creation success
-    LaunchedEffect(orderUiState.orders.size) {
-        if (!orderUiState.isCreatingOrder && orderUiState.errorMessage == null && orderUiState.orders.isNotEmpty()) {
+    // Monitor order creation success - only trigger when user explicitly creates an order
+    var hasTriggeredOrderCreation by remember { mutableStateOf(false) }
+    
+    // Monitor order creation state changes
+    LaunchedEffect(orderUiState.isCreatingOrder, orderUiState.errorMessage) {
+        // If we previously triggered order creation and now it's complete with no error
+        if (hasTriggeredOrderCreation && !orderUiState.isCreatingOrder && orderUiState.errorMessage == null) {
+            // Small delay to ensure UI state is stable before navigating
+            delay(500)
             onOrderSuccess()
         }
     }
@@ -185,7 +209,41 @@ fun BagDetailsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Green500)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = Green500)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Đang tải dữ liệu...",
+                            fontSize = 14.sp,
+                            color = WarmGrey600
+                        )
+                    }
+                }
+            }
+            errorMessage != null -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "❌ Có lỗi xảy ra",
+                            fontSize = 18.sp,
+                            color = Red500,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = errorMessage ?: "Lỗi không xác định",
+                            fontSize = 14.sp,
+                            color = WarmGrey600,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
             }
             surpriseBag == null -> {
@@ -201,6 +259,7 @@ fun BagDetailsScreen(
                 }
             }
             else -> {
+                val bag = surpriseBag!! // Safe to use !! here since we checked for null above
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -225,13 +284,13 @@ fun BagDetailsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = surpriseBag!!.store?.name ?: "Unknown Store",
+                                        text = bag.store?.name ?: "Unknown Store",
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.Black
                                     )
                                     Text(
-                                        text = surpriseBag!!.categoryDisplayName,
+                                        text = bag.categoryDisplayName,
                                         fontSize = 14.sp,
                                         color = Orange600,
                                         fontWeight = FontWeight.Medium
@@ -248,7 +307,7 @@ fun BagDetailsScreen(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = "-${surpriseBag!!.formattedDiscountPercentage}",
+                                        text = "-${bag.formattedDiscountPercentage}",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Red500
@@ -260,13 +319,13 @@ fun BagDetailsScreen(
                             
                             // Bag name and description
                             Text(
-                                text = surpriseBag!!.name,
+                                text = bag.name,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color.Black
                             )
                             
-                            surpriseBag!!.description?.let { desc ->
+                            bag.description?.let { desc ->
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = desc,
@@ -290,7 +349,7 @@ fun BagDetailsScreen(
                                         color = WarmGrey600
                                     )
                                     Text(
-                                        text = surpriseBag!!.formattedDiscountedPrice,
+                                        text = bag.formattedDiscountedPrice,
                                         fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Green600
@@ -304,7 +363,7 @@ fun BagDetailsScreen(
                                         color = WarmGrey600
                                     )
                                     Text(
-                                        text = surpriseBag!!.formattedOriginalPrice,
+                                        text = bag.formattedOriginalPrice,
                                         fontSize = 14.sp,
                                         color = WarmGrey500,
                                         style = androidx.compose.ui.text.TextStyle(
@@ -328,7 +387,7 @@ fun BagDetailsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = surpriseBag!!.store?.displayAddress ?: "Địa chỉ không có",
+                                    text = bag.store?.displayAddress ?: "Địa chỉ không có",
                                     fontSize = 14.sp,
                                     color = WarmGrey700
                                 )
@@ -347,7 +406,7 @@ fun BagDetailsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Nhận hàng: ${surpriseBag!!.pickupTimeDisplay}",
+                                    text = "Nhận hàng: ${bag.pickupTimeDisplay}",
                                     fontSize = 14.sp,
                                     color = WarmGrey700
                                 )
@@ -356,10 +415,10 @@ fun BagDetailsScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             
                             Text(
-                                text = surpriseBag!!.quantityDisplay,
+                                text = bag.quantityDisplay,
                                 fontSize = 14.sp,
-                                color = if (surpriseBag!!.quantityAvailable > 0) WarmGrey700 else Red500,
-                                fontWeight = if (surpriseBag!!.quantityAvailable > 0) FontWeight.Normal else FontWeight.Medium
+                                color = if (bag.quantityAvailable > 0) WarmGrey700 else Red500,
+                                fontWeight = if (bag.quantityAvailable > 0) FontWeight.Normal else FontWeight.Medium
                             )
                         }
                     }
@@ -414,19 +473,19 @@ fun BagDetailsScreen(
                                 
                                 IconButton(
                                     onClick = { 
-                                        if (quantity < (surpriseBag?.maxPerCustomer ?: 1) && 
-                                            quantity < (surpriseBag?.quantityAvailable ?: 0)) {
+                                        if (quantity < (bag.maxPerCustomer) && 
+                                            quantity < (bag.quantityAvailable)) {
                                             quantity++
                                         }
                                     },
-                                    enabled = quantity < (surpriseBag?.maxPerCustomer ?: 1) && 
-                                             quantity < (surpriseBag?.quantityAvailable ?: 0)
+                                    enabled = quantity < (bag.maxPerCustomer) && 
+                                             quantity < (bag.quantityAvailable)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = "Increase quantity",
-                                        tint = if (quantity < (surpriseBag?.maxPerCustomer ?: 1) && 
-                                                  quantity < (surpriseBag?.quantityAvailable ?: 0)) 
+                                        tint = if (quantity < (bag.maxPerCustomer) && 
+                                                  quantity < (bag.quantityAvailable)) 
                                                Green600 else WarmGrey400
                                     )
                                 }
@@ -435,7 +494,7 @@ fun BagDetailsScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             
                             Text(
-                                text = "Tối đa: ${surpriseBag?.maxPerCustomer ?: 1} túi/khách hàng",
+                                text = "Tối đa: ${bag.maxPerCustomer} túi/khách hàng",
                                 fontSize = 12.sp,
                                 color = WarmGrey600,
                                 modifier = Modifier.fillMaxWidth()
@@ -507,7 +566,7 @@ fun BagDetailsScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             
                             Text(
-                                text = "Khung giờ có thể nhận: ${surpriseBag?.pickupTimeDisplay ?: ""}",
+                                text = "Khung giờ có thể nhận: ${bag.pickupTimeDisplay}",
                                 fontSize = 12.sp,
                                 color = WarmGrey600
                             )
@@ -580,12 +639,13 @@ fun BagDetailsScreen(
                                 notes = orderNotes.takeIf { it.isNotBlank() } ?: "Đặt từ chi tiết Surprise Bag",
                                 preferredPickupTime = pickupTimeIso
                             )
+                            hasTriggeredOrderCreation = true
                             orderViewModel.createOrder(orderRequest)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
-                        enabled = surpriseBag?.isAvailable == true && !orderUiState.isCreatingOrder,
+                        enabled = bag.isAvailable && !orderUiState.isCreatingOrder,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Green600,
                             disabledContainerColor = WarmGrey300
@@ -599,8 +659,8 @@ fun BagDetailsScreen(
                             )
                         } else {
                             Text(
-                                text = if (surpriseBag?.isAvailable == true) {
-                                    "Đặt ngay • ${String.format("%,.0f", (surpriseBag?.discountedPrice ?: 0.0) * quantity)}đ"
+                                text = if (bag.isAvailable) {
+                                    "Đặt ngay • ${String.format("%,.0f", bag.discountedPrice * quantity)}đ"
                                 } else {
                                     "Không khả dụng"
                                 },
@@ -628,35 +688,33 @@ fun BagDetailsScreen(
                     pickupTimeError = null
                     
                     // Validate the selected time
-                    surpriseBag?.let { bag ->
-                        val validationResult = PickupTimeValidator.validatePickupTime(
-                            selectedTime = time,
-                            pickupStartTime = bag.pickupStartTime,
-                            pickupEndTime = bag.pickupEndTime
-                        )
-                        
-                        if (validationResult.isValid) {
-                            // Also validate it's not in the past
-                            val pastValidation = PickupTimeValidator.validateNotInPast(time)
-                            if (pastValidation.isValid) {
-                                selectedPickupTime = time
-                                // Create a Date object for the selected time (today's date with selected time)
-                                try {
-                                    val today = Calendar.getInstance()
-                                    val timeParts = time.split(":")
-                                    today.set(Calendar.HOUR_OF_DAY, timeParts[0].toInt())
-                                    today.set(Calendar.MINUTE, timeParts[1].toInt())
-                                    selectedPickupTimeFormatted = today.time
-                                } catch (e: Exception) {
-                                    selectedPickupTimeFormatted = null
-                                }
-                                showTimePickerDialog = false
-                            } else {
-                                pickupTimeError = pastValidation.errorMessage
+                    val validationResult = PickupTimeValidator.validatePickupTime(
+                        selectedTime = time,
+                        pickupStartTime = bag.pickupStartTime,
+                        pickupEndTime = bag.pickupEndTime
+                    )
+                    
+                    if (validationResult.isValid) {
+                        // Also validate it's not in the past
+                        val pastValidation = PickupTimeValidator.validateNotInPast(time)
+                        if (pastValidation.isValid) {
+                            selectedPickupTime = time
+                            // Create a Date object for the selected time (today's date with selected time)
+                            try {
+                                val today = Calendar.getInstance()
+                                val timeParts = time.split(":")
+                                today.set(Calendar.HOUR_OF_DAY, timeParts[0].toInt())
+                                today.set(Calendar.MINUTE, timeParts[1].toInt())
+                                selectedPickupTimeFormatted = today.time
+                            } catch (e: Exception) {
+                                selectedPickupTimeFormatted = null
                             }
+                            showTimePickerDialog = false
                         } else {
-                            pickupTimeError = validationResult.errorMessage
+                            pickupTimeError = pastValidation.errorMessage
                         }
+                    } else {
+                        pickupTimeError = validationResult.errorMessage
                     }
                 },
                 onDismiss = {

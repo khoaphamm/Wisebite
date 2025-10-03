@@ -1,5 +1,6 @@
 package com.example.wisebitemerchant.data.remote
 
+import com.example.wisebitemerchant.data.api.WisebiteApiService
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -7,8 +8,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "https://nondiabolic-twanna-unsensitive.ngrok-free.dev/api/v1/"  // ngrok HTTPS endpoint
-    // Use "http://localhost:8000/api/v1/" for desktop
+    private const val BASE_URL = "https://nondiabolic-twanna-unsensitive.ngrok-free.dev/"  // ngrok HTTPS endpoint
+    // Use "http://localhost:8000/" for desktop
     // Use your actual server URL for production
     
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -28,5 +29,6 @@ object RetrofitClient {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
     
-    val apiService: MerchantApiService = retrofit.create(MerchantApiService::class.java)
+    val apiService: WisebiteApiService = retrofit.create(WisebiteApiService::class.java)
+    val merchantApiService: MerchantApiService = retrofit.create(MerchantApiService::class.java)
 }

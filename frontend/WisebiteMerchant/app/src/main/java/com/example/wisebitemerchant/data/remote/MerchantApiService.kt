@@ -8,22 +8,22 @@ import retrofit2.http.*
 interface MerchantApiService {
     
     @FormUrlEncoded
-    @POST("auth/login")
+    @POST("api/v1/auth/login")
     suspend fun login(
         @Field("username") username: String,
         @Field("password") password: String
     ): Response<LoginResponse>
     
-    @POST("auth/signup")
+    @POST("api/v1/auth/signup")
     suspend fun signup(@Body request: SignupRequest): Response<UserResponse>
     
-    @POST("auth/google")
+    @POST("api/v1/auth/google")
     suspend fun signInWithGoogle(@Body request: GoogleSignInRequest): Response<LoginResponse>
     
-    @GET("user/me")
+    @GET("api/v1/user/me")
     suspend fun getCurrentUser(@Header("Authorization") token: String): Response<MerchantUser>
     
-    @GET("stores/me")
+    @GET("api/v1/stores/me")
     suspend fun getMyStore(@Header("Authorization") token: String): Response<Store>
     
     // Store management endpoints will be added later

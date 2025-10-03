@@ -34,15 +34,6 @@ data class MarkAsReadRequest(
 )
 
 /**
- * Sealed class for API result handling
- */
-sealed class ApiResult<out T> {
-    data class Success<T>(val data: T) : ApiResult<T>()
-    data class Error(val message: String) : ApiResult<Nothing>()
-    object Loading : ApiResult<Nothing>()
-}
-
-/**
  * Extension function to convert backend Notification to MerchantNotification
  */
 fun Notification.toMerchantNotification(): com.example.wisebitemerchant.service.MerchantNotification {

@@ -1,4 +1,5 @@
 import uuid
+import logging
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status
 from app.api.deps import SessionDep, CurrentUser, CurrentVendor
@@ -8,6 +9,8 @@ from app.schemas.common import PaginationResponse
 from app.schemas.transaction import OrderConfirmPickupRequest
 from app.schemas.review import ReviewCreate, ReviewPublic
 from app.models import Review, OrderStatus
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -40,11 +43,49 @@ def get_my_orders_legacy(session: SessionDep, current_user: CurrentUser):
 @router.get("/vendor/me", response_model=PaginationResponse[OrderPublic])
 def get_orders_for_my_store(session: SessionDep, current_vendor: CurrentVendor):
     """ VENDOR: Get all incoming orders for their store. """
+    logger.info(f"Getting orders for vendor: {current_vendor.id}")
+    
     store = crud.get_store_by_owner_id(session=session, owner_id=current_vendor.id)
     if not store:
+        logger.warning(f"No store found for vendor: {current_vendor.id}")
         return PaginationResponse[OrderPublic](data=[], count=0)
+    
+    logger.info(f"Found store: {store.id} - {store.name}")
     orders = crud.get_orders_by_store(session=session, store_id=store.id)
-    return PaginationResponse[OrderPublic](data=orders, count=len(orders))
+    logger.info(f"Found {len(orders)} orders for store {store.id}")
+    
+    # Convert to OrderPublic explicitly
+    order_publics = []
+    for i, order in enumerate(orders):
+        logger.info(f"Order {i+1}: ID={order.id}")
+        logger.info(f"  Customer: {order.customer}")
+        logger.info(f"  Customer ID: {order.customer_id}")
+        logger.info(f"  Items count: {len(order.items) if order.items else 0}")
+        
+        # Convert Order to OrderPublic manually
+        try:
+            order_public = OrderPublic(
+                id=order.id,
+                customer_id=order.customer_id,
+                status=order.status,
+                total_amount=order.total_amount,
+                created_at=order.created_at,
+                delivery_address=order.delivery_address,
+                notes=order.notes,
+                preferred_pickup_time=order.preferred_pickup_time,
+                customer=order.customer,  # This should include the full customer object
+                items=order.items  # This should include the full items with relationships
+            )
+            order_publics.append(order_public)
+            logger.info(f"  Successfully converted order {order.id}")
+            logger.info(f"  OrderPublic customer: {order_public.customer}")
+            logger.info(f"  OrderPublic items: {order_public.items}")
+        except Exception as e:
+            logger.error(f"  Failed to convert order {order.id}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+    
+    return PaginationResponse[OrderPublic](data=order_publics, count=len(order_publics))
 
 @router.get("/store/{store_id}", response_model=PaginationResponse[OrderPublic])
 def get_orders_by_store(session: SessionDep, current_vendor: CurrentVendor, store_id: uuid.UUID):

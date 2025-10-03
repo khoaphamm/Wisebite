@@ -1,5 +1,6 @@
 package com.example.wisebitemerchant.ui.screen
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,27 +23,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.wisebitemerchant.data.model.MerchantOrderStatus
+import com.example.wisebitemerchant.data.model.Order
 import com.example.wisebitemerchant.service.MerchantNotificationService
 import com.example.wisebitemerchant.ui.theme.*
+import com.example.wisebitemerchant.ui.viewmodel.OrderViewModel
+import com.example.wisebitemerchant.ui.viewmodel.OrderViewModelFactory
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
-
-// Mock data models - these should come from your actual data layer
-data class MerchantOrder(
-    val id: String,
-    val customerName: String,
-    val items: List<String>,
-    val totalAmount: Double,
-    val status: MerchantOrderStatus,
-    val pickupTime: String?,
-    val createdAt: Date = Date(),
-    val notes: String? = null
-)
-
-enum class MerchantOrderStatus {
-    NEW, CONFIRMED, PREPARING, READY, COMPLETED, CANCELLED
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,57 +41,65 @@ fun EnhancedOrdersScreen() {
     val context = LocalContext.current
     val notificationService = remember { MerchantNotificationService.getInstance(context) }
     
+    // Use real OrderViewModel instead of mock data
+    val orderViewModel: OrderViewModel = viewModel(
+        factory = OrderViewModelFactory(context)
+    )
+    val uiState by orderViewModel.uiState.collectAsStateWithLifecycle()
+    
     // Listen for real-time notifications
     val notifications by notificationService.notifications.collectAsStateWithLifecycle(initialValue = null)
     
-    // Mock orders data - replace with actual ViewModel
-    // Using mutableStateListOf to allow updates
-    val mockOrders = remember {
-        mutableStateListOf(
-            MerchantOrder(
-                id = "ORD001",
-                customerName = "Nguyễn Văn A",
-                items = listOf("Combo trưa", "Nước ngọt"),
-                totalAmount = 45000.0,
-                status = MerchantOrderStatus.NEW,
-                pickupTime = "12:30"
-            ),
-            MerchantOrder(
-                id = "ORD002", 
-                customerName = "Trần Thị B",
-                items = listOf("Bánh mì"),
-                totalAmount = 25000.0,
-                status = MerchantOrderStatus.PREPARING,
-                pickupTime = "13:00"
-            ),
-            MerchantOrder(
-                id = "ORD003",
-                customerName = "Lê Minh C",
-                items = listOf("Surprise Bag"),
-                totalAmount = 30000.0,
-                status = MerchantOrderStatus.READY,
-                pickupTime = "14:00"
-            )
+    // Show error dialog if there's an error
+    uiState.errorMessage?.let { error ->
+        LaunchedEffect(error) {
+            // You can show a snackbar or toast here
+        }
+        AlertDialog(
+            onDismissRequest = { orderViewModel.clearErrorMessage() },
+            title = { Text("Lỗi") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = { orderViewModel.clearErrorMessage() }) {
+                    Text("OK")
+                }
+            }
         )
     }
     
-    // Handler to update order status
-    val updateOrderStatus: (String, MerchantOrderStatus) -> Unit = { orderId, newStatus ->
-        val index = mockOrders.indexOfFirst { it.id == orderId }
-        if (index != -1) {
-            mockOrders[index] = mockOrders[index].copy(status = newStatus)
-        }
+    // Show loading dialog when updating orders
+    if (uiState.isUpdatingOrder) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Đang cập nhật") },
+            text = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Orange600
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Đang cập nhật trạng thái đơn hàng...")
+                }
+            },
+            confirmButton = { }
+        )
     }
     
-    // Show notification snackbar
-    notifications?.let { notification ->
-        LaunchedEffect(notification.id) {
-            // You can show a snackbar or handle the notification here
-        }
-    }
+    // Get filtered orders for each tab
+    val newOrders = orderViewModel.getNewOrders()
+    val processingOrders = orderViewModel.getProcessingOrders()
+    val readyOrders = orderViewModel.getReadyOrders()
+    val completedOrders = orderViewModel.getCompletedOrders()
     
-    val tabs = listOf("Mới (${mockOrders.count { it.status == MerchantOrderStatus.NEW }})", 
-                     "Đang xử lý", "Sẵn sàng", "Hoàn thành")
+    val tabs = listOf(
+        "Mới (${newOrders.size})",
+        "Đang xử lý (${processingOrders.size})",
+        "Sẵn sàng (${readyOrders.size})",
+        "Hoàn thành (${completedOrders.size})"
+    )
     
     Column(
         modifier = Modifier.fillMaxSize()
@@ -117,6 +115,18 @@ fun EnhancedOrdersScreen() {
             actions = {
                 Box {
                     IconButton(onClick = { 
+                        // Refresh orders
+                        orderViewModel.loadOrders()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh orders"
+                        )
+                    }
+                }
+                
+                Box {
+                    IconButton(onClick = { 
                         // Test notification
                         notificationService.simulateNewOrderNotification(
                             "TEST001", "Khách hàng mới", 2, 50000.0
@@ -127,13 +137,15 @@ fun EnhancedOrdersScreen() {
                             contentDescription = "Notifications"
                         )
                     }
-                    // Red dot for new notifications
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color.Red, CircleShape)
-                            .align(Alignment.TopEnd)
-                    )
+                    // Red dot for new notifications  
+                    if (newOrders.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(Color.Red, CircleShape)
+                                .align(Alignment.TopEnd)
+                        )
+                    }
                 }
             }
         )
@@ -162,28 +174,26 @@ fun EnhancedOrdersScreen() {
         // Content based on selected tab
         when (selectedTabIndex) {
             0 -> NewOrdersContent(
-                orders = mockOrders.filter { it.status == MerchantOrderStatus.NEW },
-                onAccept = { orderId -> updateOrderStatus(orderId, MerchantOrderStatus.CONFIRMED) },
-                onReject = { orderId -> updateOrderStatus(orderId, MerchantOrderStatus.CANCELLED) }
+                orders = newOrders,
+                onAccept = { orderId -> orderViewModel.acceptOrder(orderId) },
+                onReject = { orderId -> orderViewModel.rejectOrder(orderId) }
             )
             1 -> ProcessingOrdersContent(
-                orders = mockOrders.filter { 
-                    it.status == MerchantOrderStatus.CONFIRMED || it.status == MerchantOrderStatus.PREPARING 
-                },
-                onMarkReady = { orderId -> updateOrderStatus(orderId, MerchantOrderStatus.READY) }
+                orders = processingOrders,
+                onMarkReady = { orderId -> orderViewModel.markOrderReady(orderId) }
             )
             2 -> ReadyOrdersContent(
-                orders = mockOrders.filter { it.status == MerchantOrderStatus.READY },
-                onMarkCompleted = { orderId -> updateOrderStatus(orderId, MerchantOrderStatus.COMPLETED) }
+                orders = readyOrders,
+                onMarkCompleted = { orderId -> orderViewModel.markOrderCompleted(orderId) }
             )
-            3 -> CompletedOrdersContent(mockOrders.filter { it.status == MerchantOrderStatus.COMPLETED })
+            3 -> CompletedOrdersContent(completedOrders)
         }
     }
 }
 
 @Composable
 fun NewOrdersContent(
-    orders: List<MerchantOrder>,
+    orders: List<Order>,
     onAccept: (String) -> Unit,
     onReject: (String) -> Unit
 ) {
@@ -212,7 +222,7 @@ fun NewOrdersContent(
 
 @Composable
 fun ProcessingOrdersContent(
-    orders: List<MerchantOrder>,
+    orders: List<Order>,
     onMarkReady: (String) -> Unit
 ) {
     if (orders.isEmpty()) {
@@ -239,7 +249,7 @@ fun ProcessingOrdersContent(
 
 @Composable
 fun ReadyOrdersContent(
-    orders: List<MerchantOrder>,
+    orders: List<Order>,
     onMarkCompleted: (String) -> Unit
 ) {
     if (orders.isEmpty()) {
@@ -265,7 +275,7 @@ fun ReadyOrdersContent(
 }
 
 @Composable
-fun CompletedOrdersContent(orders: List<MerchantOrder>) {
+fun CompletedOrdersContent(orders: List<Order>) {
     if (orders.isEmpty()) {
         EmptyOrdersState(
             icon = Icons.Default.Done,
@@ -328,10 +338,17 @@ fun EmptyOrdersState(
 
 @Composable
 fun NewOrderCard(
-    order: MerchantOrder,
+    order: Order,
     onAccept: () -> Unit,
     onReject: () -> Unit
 ) {
+    // Log order details when rendering
+    Log.d("EnhancedOrdersScreen", "Rendering NewOrderCard for order: ${order.id}")
+    Log.d("EnhancedOrdersScreen", "  Customer: ${order.customer}")
+    Log.d("EnhancedOrdersScreen", "  Customer name: ${order.customerName}")
+    Log.d("EnhancedOrdersScreen", "  Items: ${order.items}")
+    Log.d("EnhancedOrdersScreen", "  Items display: ${order.itemsDisplay}")
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -383,7 +400,7 @@ fun NewOrderCard(
             
             // Order items
             Text(
-                text = order.items.joinToString(", "),
+                text = order.itemsDisplay,
                 fontSize = 14.sp,
                 color = WarmGrey600,
                 maxLines = 2,
@@ -397,7 +414,7 @@ fun NewOrderCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                order.pickupTime?.let { time ->
+                order.formattedPickupTime?.let { time ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.AccessTime,
@@ -416,8 +433,7 @@ fun NewOrderCard(
                 }
                 
                 Text(
-                    text = NumberFormat.getCurrencyInstance(Locale("vi", "VN"))
-                        .format(order.totalAmount),
+                    text = order.formattedTotalAmount,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Green600
@@ -457,7 +473,7 @@ fun NewOrderCard(
 
 @Composable
 fun ProcessingOrderCard(
-    order: MerchantOrder,
+    order: Order,
     onMarkReady: () -> Unit
 ) {
     Card(
@@ -489,7 +505,7 @@ fun ProcessingOrderCard(
 
 @Composable
 fun ReadyOrderCard(
-    order: MerchantOrder,
+    order: Order,
     onMarkCompleted: () -> Unit
 ) {
     var showConfirmDialog by remember { mutableStateOf(false) }
@@ -576,7 +592,7 @@ fun ReadyOrderCard(
 }
 
 @Composable
-fun CompletedOrderCard(order: MerchantOrder) {
+fun CompletedOrderCard(order: Order) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -593,7 +609,7 @@ fun CompletedOrderCard(order: MerchantOrder) {
 }
 
 @Composable
-fun OrderCardHeader(order: MerchantOrder, statusText: String, statusColor: Color) {
+fun OrderCardHeader(order: Order, statusText: String, statusColor: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -615,7 +631,7 @@ fun OrderCardHeader(order: MerchantOrder, statusText: String, statusColor: Color
 }
 
 @Composable
-fun OrderCardContent(order: MerchantOrder) {
+fun OrderCardContent(order: Order) {
     Spacer(modifier = Modifier.height(12.dp))
     
     Text(
@@ -628,7 +644,7 @@ fun OrderCardContent(order: MerchantOrder) {
     Spacer(modifier = Modifier.height(8.dp))
     
     Text(
-        text = order.items.joinToString(", "),
+        text = order.itemsDisplay,
         fontSize = 14.sp,
         color = WarmGrey600
     )
@@ -639,7 +655,7 @@ fun OrderCardContent(order: MerchantOrder) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        order.pickupTime?.let { time ->
+        order.formattedPickupTime?.let { time ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.AccessTime,
@@ -651,15 +667,13 @@ fun OrderCardContent(order: MerchantOrder) {
                 Text(
                     text = "Nhận lúc $time",
                     fontSize = 14.sp,
-                    color = Orange600,
-                    fontWeight = FontWeight.Medium
+                    color = Orange600
                 )
             }
         }
         
         Text(
-            text = NumberFormat.getCurrencyInstance(Locale("vi", "VN"))
-                .format(order.totalAmount),
+            text = order.formattedTotalAmount,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = Green600

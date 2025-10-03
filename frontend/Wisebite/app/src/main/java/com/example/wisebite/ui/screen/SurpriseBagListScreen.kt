@@ -77,7 +77,6 @@ class SurpriseBagListViewModel(
                 android.util.Log.d("SurpriseBagListViewModel", "Loading all surprise bags")
                 repository.getAllSurpriseBags(
                     category = if (_uiState.value.selectedCategory == "Tất cả") null else _uiState.value.selectedCategory,
-                    city = null, // Remove city filter temporarily
                     maxPrice = _uiState.value.maxPrice
                 )
             }

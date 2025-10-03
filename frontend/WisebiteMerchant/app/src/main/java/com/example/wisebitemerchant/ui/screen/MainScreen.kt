@@ -126,7 +126,7 @@ fun MainNavHost(
         }
         
         composable(Routes.ORDERS) {
-            OrdersScreen()
+            EnhancedOrdersScreen()
         }
         
         composable(Routes.PROFILE) {

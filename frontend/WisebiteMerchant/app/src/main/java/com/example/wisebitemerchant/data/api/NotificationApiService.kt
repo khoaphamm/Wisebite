@@ -14,7 +14,7 @@ interface NotificationApiService {
      * Get notifications for the current merchant user
      * Uses user-specific endpoint: GET /user/me/notifications
      */
-    @GET("user/me/notifications")
+    @GET("api/v1/user/me/notifications")
     suspend fun getUserNotifications(
         @Header("Authorization") authToken: String,
         @Query("skip") skip: Int = 0,
@@ -26,7 +26,7 @@ interface NotificationApiService {
      * Mark a notification as read
      * Uses user endpoint: PUT /user/read/{notification_id}
      */
-    @PUT("user/read/{notification_id}")
+    @PUT("api/v1/user/read/{notification_id}")
     suspend fun markNotificationAsRead(
         @Header("Authorization") authToken: String,
         @Path("notification_id") notificationId: String
@@ -36,7 +36,7 @@ interface NotificationApiService {
      * Mark all notifications as read for the current user
      * Uses user endpoint: PUT /user/read_all
      */
-    @PUT("user/read_all")
+    @PUT("api/v1/user/read_all")
     suspend fun markAllNotificationsAsRead(
         @Header("Authorization") authToken: String
     ): Response<ApiResponse<Unit>>
@@ -45,7 +45,7 @@ interface NotificationApiService {
      * Get unread notification count
      * Uses user endpoint: GET /user/me/notifications with unread_only=true
      */
-    @GET("user/me/notifications")
+    @GET("api/v1/user/me/notifications")
     suspend fun getUnreadCount(
         @Header("Authorization") authToken: String,
         @Query("unread_only") unreadOnly: Boolean = true,

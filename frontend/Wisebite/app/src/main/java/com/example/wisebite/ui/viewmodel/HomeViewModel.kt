@@ -37,12 +37,10 @@ class HomeViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             // Load stores, categories, and featured surprise bags in parallel
-            // Try without city filter first to see if it works
-            val storesResult = surpriseBagRepository.getAvailableStores(null)
+            val storesResult = surpriseBagRepository.getAvailableStores()
             val categoriesResult = surpriseBagRepository.getAvailableCategories()
             val bagsResult = surpriseBagRepository.getAllSurpriseBags(
                 category = null,
-                city = null,
                 maxPrice = null
             )
             
@@ -90,7 +88,6 @@ class HomeViewModel(
                 android.util.Log.d("HomeViewModel", "Filtering by category: $category")
                 when (val result = surpriseBagRepository.getAllSurpriseBags(
                     category = category,
-                    city = null, // Remove city filter to avoid mismatch issues
                     maxPrice = null
                 )) {
                     is ApiResult.Success -> {

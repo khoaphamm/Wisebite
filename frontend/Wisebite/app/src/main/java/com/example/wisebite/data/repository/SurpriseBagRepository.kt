@@ -40,15 +40,11 @@ class SurpriseBagRepository(
         }
     }
     
-    suspend fun getAvailableStores(city: String? = null): ApiResult<List<Store>> {
+    suspend fun getAvailableStores(): ApiResult<List<Store>> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d("SurpriseBagRepository", "Fetching stores for city: $city")
-                val response = if (city != null) {
-                    apiService.getAvailableStores(city)
-                } else {
-                    apiService.getAvailableStores()
-                }
+                Log.d("SurpriseBagRepository", "Fetching all stores")
+                val response = apiService.getAvailableStores()
                 
                 Log.d("SurpriseBagRepository", "Response code: ${response.code()}")
                 Log.d("SurpriseBagRepository", "Response body: ${response.body()}")
@@ -96,13 +92,12 @@ class SurpriseBagRepository(
     
     suspend fun getAllSurpriseBags(
         category: String? = null,
-        city: String? = null,
         maxPrice: Double? = null
     ): ApiResult<List<SurpriseBag>> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d("SurpriseBagRepository", "Fetching surprise bags - category: $category, city: $city, maxPrice: $maxPrice")
-                val response = apiService.getAllSurpriseBags(category, city, null, null, maxPrice)
+                Log.d("SurpriseBagRepository", "Fetching surprise bags - category: $category, maxPrice: $maxPrice")
+                val response = apiService.getAllSurpriseBags(category, null, null, null, maxPrice)
                 
                 Log.d("SurpriseBagRepository", "Response code: ${response.code()}")
                 Log.d("SurpriseBagRepository", "Response body: ${response.body()}")

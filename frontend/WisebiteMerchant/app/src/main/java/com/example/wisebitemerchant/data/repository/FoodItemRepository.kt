@@ -14,12 +14,6 @@ import kotlinx.coroutines.flow.first
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-sealed class ApiResult<T> {
-    data class Success<T>(val data: T) : ApiResult<T>()
-    data class Error<T>(val message: String) : ApiResult<T>()
-    data class Loading<T>(val isLoading: Boolean = true) : ApiResult<T>()
-}
-
 class FoodItemRepository private constructor(
     private val context: Context
 ) {
@@ -180,7 +174,7 @@ class FoodItemRepository private constructor(
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
                     Log.e("FoodItemRepository", "No auth token available")
-                    return@withContext ApiResult.Error<List<FoodItem>>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 Log.d("FoodItemRepository", "Fetching food items with auth header: ${authHeader.take(20)}...")
@@ -214,7 +208,7 @@ class FoodItemRepository private constructor(
             try {
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
-                    return@withContext ApiResult.Error<FoodItem>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 val response = apiService.createFoodItem(
@@ -244,7 +238,7 @@ class FoodItemRepository private constructor(
             try {
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
-                    return@withContext ApiResult.Error<FoodItem>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 val request = SurplusMarkingRequest(
@@ -281,7 +275,7 @@ class FoodItemRepository private constructor(
             try {
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
-                    return@withContext ApiResult.Error<FoodItem>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 val request = InventoryUpdateRequest(
@@ -313,7 +307,7 @@ class FoodItemRepository private constructor(
             try {
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
-                    return@withContext ApiResult.Error<Unit>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 val response = apiService.deleteFoodItem(
@@ -353,7 +347,7 @@ class FoodItemRepository private constructor(
                 
                 if (authHeader == null) {
                     Log.e("FoodItemRepository", "No auth token available")
-                    return@withContext ApiResult.Error<Unit>("Not authenticated - no token")
+                    return@withContext ApiResult.Error("Not authenticated - no token")
                 }
                 
                 // You can add a call to get current user info here if the endpoint exists
@@ -381,7 +375,7 @@ class FoodItemRepository private constructor(
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
                     Log.e("FoodItemRepository", "Not authenticated")
-                    return@withContext ApiResult.Error<List<SurpriseBagResponse>>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 val response = apiService.getSurpriseBags(authorization = authHeader)
@@ -412,7 +406,7 @@ class FoodItemRepository private constructor(
                 
                 if (authHeader == null) {
                     Log.e("FoodItemRepository", "Not authenticated - no token for surprise bag creation")
-                    return@withContext ApiResult.Error<SurpriseBagResponse>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 // Log the exact request being sent
@@ -450,7 +444,7 @@ class FoodItemRepository private constructor(
                         if (errorBody?.contains("Could not validate credentials") == true || 
                             errorBody?.contains("Invalid token") == true) {
                             Log.w("FoodItemRepository", "Token appears to be expired/invalid, need to re-authenticate")
-                            return@withContext ApiResult.Error<SurpriseBagResponse>("Token expired - please login again")
+                            return@withContext ApiResult.Error("Token expired - please login again")
                         }
                     } catch (e: Exception) {
                         Log.e("FoodItemRepository", "Could not read error body: ${e.message}")
@@ -487,7 +481,7 @@ class FoodItemRepository private constructor(
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
                     Log.e("FoodItemRepository", "Not authenticated")
-                    return@withContext ApiResult.Error<SurpriseBagResponse>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 val response = apiService.updateSurpriseBag(
@@ -519,7 +513,7 @@ class FoodItemRepository private constructor(
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
                     Log.e("FoodItemRepository", "Not authenticated")
-                    return@withContext ApiResult.Error<Unit>("Not authenticated")
+                    return@withContext ApiResult.Error("Not authenticated")
                 }
                 
                 val response = apiService.deleteSurpriseBag(

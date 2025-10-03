@@ -1,5 +1,6 @@
 import uuid
 import httpx
+import logging
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import Session, select, delete
@@ -10,6 +11,8 @@ from geoalchemy2.functions import ST_Distance_Sphere, ST_MakePoint, ST_X, ST_Y
 from geoalchemy2 import WKTElement
 from passlib.context import CryptContext
 from app.schemas.notification import NotificationCreate
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
@@ -694,6 +697,8 @@ def create_order(session: Session, order_create: OrderCreate, customer_id: uuid.
 
 def get_orders_by_store(session: Session, store_id: uuid.UUID) -> List[Order]:
     """Get all orders that contain items from a specific store."""
+    logger.info(f"Getting orders for store: {store_id}")
+    
     # Get order IDs from both surprise bags and food items for this store
     surprise_bag_order_ids = select(Order.id).join(OrderItem).join(SurpriseBag).where(
         SurpriseBag.store_id == store_id
@@ -706,6 +711,7 @@ def get_orders_by_store(session: Session, store_id: uuid.UUID) -> List[Order]:
     # Combine the order IDs using union
     all_order_ids = surprise_bag_order_ids.union(food_item_order_ids)
     
+    logger.info("Building query with relationships...")
     # Now get the actual Order objects with relationships loaded
     statement = select(Order).where(Order.id.in_(all_order_ids)).order_by(Order.created_at.desc()).options(
         selectinload(Order.customer),
@@ -713,7 +719,38 @@ def get_orders_by_store(session: Session, store_id: uuid.UUID) -> List[Order]:
         selectinload(Order.items).selectinload(OrderItem.food_item)
     )
     
-    return session.exec(statement).all()
+    logger.info("Executing query...")
+    orders = session.exec(statement).all()
+    logger.info(f"Raw query returned {len(orders)} orders")
+    
+    # Log details for debugging
+    for i, order in enumerate(orders):
+        logger.info(f"Order {i+1}: {order.id}")
+        logger.info(f"  Customer object: {order.customer}")
+        logger.info(f"  Customer ID: {order.customer_id}")
+        logger.info(f"  Items: {order.items}")
+        logger.info(f"  Items length: {len(order.items) if order.items else 'None'}")
+        
+        if order.customer:
+            logger.info(f"  Customer full_name: {order.customer.full_name}")
+        else:
+            logger.warning(f"  Customer is None!")
+            
+        if order.items:
+            for j, item in enumerate(order.items):
+                logger.info(f"    Item {j+1}: {item.id}")
+                if item.surprise_bag:
+                    logger.info(f"      Surprise bag: {item.surprise_bag.name}")
+                else:
+                    logger.info(f"      Surprise bag: None")
+                if item.food_item:
+                    logger.info(f"      Food item: {item.food_item.name}")
+                else:
+                    logger.info(f"      Food item: None")
+        else:
+            logger.warning(f"  Items is None or empty!")
+    
+    return orders
 
 def order_belongs_to_store(session: Session, order_id: uuid.UUID, store_id: uuid.UUID) -> bool:
     """Check if an order contains items from a specific store."""

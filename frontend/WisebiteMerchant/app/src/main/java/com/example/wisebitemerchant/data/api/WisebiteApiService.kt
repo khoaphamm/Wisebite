@@ -1,5 +1,8 @@
 package com.example.wisebitemerchant.data.api
 
+import com.example.wisebitemerchant.data.model.Order
+import com.example.wisebitemerchant.data.model.OrderStatusUpdateRequest
+import com.example.wisebitemerchant.data.model.OrdersResponse
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -233,4 +236,23 @@ interface WisebiteApiService {
         @Header("Authorization") authorization: String,
         @Path("bag_id") bagId: String
     ): Response<Unit>
+    
+    // Order Management endpoints
+    @GET("api/v1/orders/vendor/me")
+    suspend fun getMyOrders(
+        @Header("Authorization") authorization: String
+    ): Response<OrdersResponse>
+    
+    @GET("api/v1/orders/{order_id}")
+    suspend fun getOrderById(
+        @Header("Authorization") authorization: String,
+        @Path("order_id") orderId: String
+    ): Response<Order>
+    
+    @PATCH("api/v1/orders/{order_id}/status")
+    suspend fun updateOrderStatus(
+        @Header("Authorization") authorization: String,
+        @Path("order_id") orderId: String,
+        @Body request: OrderStatusUpdateRequest
+    ): Response<Order>
 }

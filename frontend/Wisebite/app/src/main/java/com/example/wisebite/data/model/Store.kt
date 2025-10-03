@@ -19,7 +19,13 @@ data class Store(
     val logoUrl: String? = null,
     
     @SerializedName("owner_id")
-    val ownerId: String? = null
+    val ownerId: String? = null,
+    
+    @SerializedName("latitude")
+    val latitude: Double? = null,
+    
+    @SerializedName("longitude")
+    val longitude: Double? = null
 ) {
     // Helper methods
     val displayName: String
@@ -30,13 +36,4 @@ data class Store(
     
     val displayDescription: String
         get() = description ?: "Cửa hàng uy tín, chất lượng"
-    
-    // Extract city from address for filtering
-    val city: String
-        get() = when {
-            address.contains("TP.HCM") || address.contains("Hồ Chí Minh") -> "TP.HCM"
-            address.contains("Hà Nội") -> "Hà Nội"
-            address.contains("Đà Nẵng") -> "Đà Nẵng"
-            else -> "Khác"
-        }
 }
