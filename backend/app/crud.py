@@ -581,8 +581,8 @@ def get_order_by_id(session: Session, order_id: uuid.UUID) -> Optional[Order]:
 def get_orders_by_customer(session: Session, customer_id: uuid.UUID) -> List[Order]:
     statement = select(Order).where(Order.customer_id == customer_id).order_by(Order.created_at.desc()).options(
         selectinload(Order.customer),
-        selectinload(Order.items).selectinload(OrderItem.surprise_bag),
-        selectinload(Order.items).selectinload(OrderItem.food_item)
+        selectinload(Order.items).selectinload(OrderItem.surprise_bag).selectinload(SurpriseBag.store),
+        selectinload(Order.items).selectinload(OrderItem.food_item).selectinload(FoodItem.store)
     )
     return session.exec(statement).all()
 

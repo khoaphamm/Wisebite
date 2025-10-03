@@ -192,7 +192,7 @@ private fun OrderCard(
             
             // Store name
             Text(
-                text = order.store?.name ?: "Unknown Store",
+                text = getStoreName(order),
                 fontSize = 14.sp,
                 color = WarmGrey600,
                 maxLines = 1,
@@ -250,4 +250,13 @@ private fun formatDate(dateString: String): String {
     } catch (e: Exception) {
         dateString
     }
+}
+
+private fun getStoreName(order: Order): String {
+    // Get store name from the first item that has store information
+    order.items?.forEach { item ->
+        item.surpriseBag?.store?.name?.let { return it }
+        item.foodItem?.store?.name?.let { return it }
+    }
+    return "Unknown Store"
 }

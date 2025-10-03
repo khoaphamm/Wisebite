@@ -238,13 +238,13 @@ private fun StoreInfoCard(order: Order) {
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = order.store?.name ?: "Unknown Store",
+                text = getStoreName(order),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 color = Green600
             )
             
-            order.store?.address?.let { address ->
+            getStoreAddress(order)?.let { address ->
                 Text(
                     text = address,
                     fontSize = 14.sp,
@@ -398,4 +398,22 @@ private fun formatDate(dateString: String): String {
     } catch (e: Exception) {
         dateString
     }
+}
+
+private fun getStoreName(order: Order): String {
+    // Get store name from the first item that has store information
+    order.items?.forEach { item ->
+        item.surpriseBag?.store?.name?.let { return it }
+        item.foodItem?.store?.name?.let { return it }
+    }
+    return "Unknown Store"
+}
+
+private fun getStoreAddress(order: Order): String? {
+    // Get store address from the first item that has store information
+    order.items?.forEach { item ->
+        item.surpriseBag?.store?.address?.let { return it }
+        item.foodItem?.store?.address?.let { return it }
+    }
+    return null
 }

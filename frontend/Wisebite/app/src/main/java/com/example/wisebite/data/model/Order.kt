@@ -30,10 +30,10 @@ data class Order(
     val preferredPickupTime: String?,
     
     @SerializedName("customer")
-    val customer: User,
+    val customer: User?,
     
     @SerializedName("items")
-    val items: List<OrderItem>,
+    val items: List<OrderItem>?,
     
     @SerializedName("store")
     val store: Store? = null
