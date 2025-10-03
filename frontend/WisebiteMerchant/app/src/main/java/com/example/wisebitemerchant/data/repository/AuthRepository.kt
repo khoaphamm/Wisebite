@@ -185,6 +185,35 @@ class AuthRepository private constructor(
         }
     }
     
+    suspend fun updateProfile(user: MerchantUser): Result<MerchantUser> {
+        return try {
+            val authToken = tokenManager.getAuthToken()
+            if (authToken == null) {
+                return Result.failure(Exception("Vui lòng đăng nhập lại"))
+            }
+            
+            val response = apiService.updateProfile(authToken, user)
+            
+            if (response.isSuccessful) {
+                response.body()?.let { updatedUser ->
+                    Result.success(updatedUser)
+                } ?: Result.failure(Exception("Empty response"))
+            } else {
+                val errorMessage = when (response.code()) {
+                    401 -> "Phiên đăng nhập đã hết hạn"
+                    403 -> "Không có quyền truy cập"
+                    400 -> "Dữ liệu không hợp lệ"
+                    409 -> "Email hoặc số điện thoại đã được sử dụng"
+                    else -> "Không thể cập nhật thông tin"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "Update profile error", e)
+            Result.failure(Exception("Lỗi mạng. Vui lòng kiểm tra kết nối."))
+        }
+    }
+    
     suspend fun getMyStore(): Result<Store> {
         return try {
             val authToken = tokenManager.getAuthToken()

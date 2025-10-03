@@ -42,10 +42,12 @@ val Red700 = Color(0xFFB91C1C)
 val Red900 = Color(0xFF7F1D1D)
 
 val Blue100 = Color(0xFFDBEAFE)
+val Blue200 = Color(0xFFBFDBFE)
 val Blue400 = Color(0xFF60A5FA)
 val Blue500 = Color(0xFF3B82F6) // Information
 val Blue600 = Color(0xFF2563EB)
 val Blue700 = Color(0xFF1D4ED8)
+val Blue800 = Color(0xFF1E40AF)
 val Blue900 = Color(0xFF1E3A8A)
 
 // Legacy colors for compatibility

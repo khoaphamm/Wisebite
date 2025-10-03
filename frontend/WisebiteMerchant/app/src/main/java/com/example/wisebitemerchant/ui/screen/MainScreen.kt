@@ -130,7 +130,20 @@ fun MainNavHost(
         }
         
         composable(Routes.PROFILE) {
-            ProfileScreen(onLogout = onLogout)
+            ProfileScreen(
+                onLogout = onLogout,
+                onNavigateToEditProfile = {
+                    navController.navigate(Routes.EDIT_PROFILE)
+                }
+            )
+        }
+        
+        composable(Routes.EDIT_PROFILE) {
+            MerchantEditProfileScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }

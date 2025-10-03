@@ -15,6 +15,7 @@ object Routes {
     
     // Sub-routes
     // const val ADD_FOOD_ITEM = "add_food_item" // Temporarily hidden per client request
+    const val EDIT_PROFILE = "edit_profile"
     const val SETTINGS = "settings"
     const val ANALYTICS = "analytics"
     const val NOTIFICATIONS = "notifications"

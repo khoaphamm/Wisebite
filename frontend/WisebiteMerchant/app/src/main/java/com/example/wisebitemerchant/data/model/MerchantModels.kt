@@ -14,19 +14,25 @@ data class MerchantUser(
 )
 
 data class Store(
-    @SerializedName("store_id") val storeId: Int,
-    @SerializedName("merchant_id") val merchantId: Int,
-    @SerializedName("store_name") val storeName: String,
-    @SerializedName("store_description") val storeDescription: String? = null,
-    @SerializedName("store_address") val storeAddress: String,
-    @SerializedName("store_phone") val storePhone: String? = null,
-    @SerializedName("store_image") val storeImage: String? = null,
-    @SerializedName("business_hours") val businessHours: String? = null,
-    @SerializedName("cuisine_type") val cuisineType: String? = null,
-    @SerializedName("is_active") val isActive: Boolean = true,
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("address") val address: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("logo_url") val logoUrl: String? = null,
+    @SerializedName("owner_id") val ownerId: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    @SerializedName("cuisine_type") val cuisineType: String? = null,
+    @SerializedName("is_active") val isActive: Boolean = true,
     @SerializedName("created_at") val createdAt: String? = null
+)
+
+data class StoreCreateRequest(
+    val name: String,
+    val description: String? = null,
+    val address: String,
+    @SerializedName("logo_url") val logoUrl: String? = null,
+    @SerializedName("cuisine_type") val cuisineType: String? = null
 )
 
 data class LoginRequest(
