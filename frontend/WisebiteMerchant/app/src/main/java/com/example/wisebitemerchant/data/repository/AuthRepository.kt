@@ -57,10 +57,7 @@ class AuthRepository private constructor(
         fullName: String,
         email: String,
         phoneNumber: String,
-        password: String,
-        storeName: String,
-        storeAddress: String,
-        cuisineType: String? = null
+        password: String
     ): Result<LoginResponse> {
         return try {
             // First, create the user account

@@ -16,9 +16,6 @@ data class SignupUiState(
     val phoneNumber: String = "",
     val password: String = "",
     val confirmPassword: String = "",
-    val storeName: String = "",
-    val storeAddress: String = "",
-    val cuisineType: String = "",
     val selectedCountry: CountryCode = CountryCodeData.defaultCountry,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -29,9 +26,7 @@ data class SignupUiState(
     val emailError: String? = null,
     val phoneNumberError: String? = null,
     val passwordError: String? = null,
-    val confirmPasswordError: String? = null,
-    val storeNameError: String? = null,
-    val storeAddressError: String? = null
+    val confirmPasswordError: String? = null
 )
 
 class SignupViewModel(private val authRepository: AuthRepository) : ViewModel() {
@@ -97,28 +92,6 @@ class SignupViewModel(private val authRepository: AuthRepository) : ViewModel() 
         validateConfirmPasswordField(confirmPassword)
     }
     
-    fun updateStoreName(storeName: String) {
-        _uiState.value = _uiState.value.copy(
-            storeName = storeName, 
-            storeNameError = null,
-            errorMessage = null
-        )
-        validateStoreNameField(storeName)
-    }
-    
-    fun updateStoreAddress(storeAddress: String) {
-        _uiState.value = _uiState.value.copy(
-            storeAddress = storeAddress, 
-            storeAddressError = null,
-            errorMessage = null
-        )
-        validateStoreAddressField(storeAddress)
-    }
-    
-    fun updateCuisineType(cuisineType: String) {
-        _uiState.value = _uiState.value.copy(cuisineType = cuisineType)
-    }
-    
     fun togglePasswordVisibility() {
         _uiState.value = _uiState.value.copy(isPasswordVisible = !_uiState.value.isPasswordVisible)
     }
@@ -158,10 +131,7 @@ class SignupViewModel(private val authRepository: AuthRepository) : ViewModel() 
                     fullName = currentState.fullName,
                     email = currentState.email,
                     phoneNumber = formattedPhone,
-                    password = currentState.password,
-                    storeName = currentState.storeName,
-                    storeAddress = currentState.storeAddress,
-                    cuisineType = currentState.cuisineType.ifBlank { null }
+                    password = currentState.password
                 )
                 
                 if (result.isSuccess) {
@@ -231,8 +201,8 @@ class SignupViewModel(private val authRepository: AuthRepository) : ViewModel() 
             isValid = false
         }
         
-        // Store validation - make optional for now since stores are created separately
-        // TODO: Remove this when implementing proper store creation flow
+        // Store validation - make optional since stores can be created later
+        // Merchants can create their store after signup through their profile
         /*
         // Validate store name
         if (state.storeName.isBlank()) {
@@ -304,26 +274,6 @@ class SignupViewModel(private val authRepository: AuthRepository) : ViewModel() 
             _uiState.value = _uiState.value.copy(confirmPasswordError = "Mật khẩu xác nhận không khớp")
         } else {
             _uiState.value = _uiState.value.copy(confirmPasswordError = null)
-        }
-    }
-    
-    private fun validateStoreNameField(storeName: String) {
-        if (storeName.isBlank()) return
-        
-        if (storeName.length < 2) {
-            _uiState.value = _uiState.value.copy(storeNameError = "Tên cửa hàng phải có ít nhất 2 ký tự")
-        } else {
-            _uiState.value = _uiState.value.copy(storeNameError = null)
-        }
-    }
-    
-    private fun validateStoreAddressField(storeAddress: String) {
-        if (storeAddress.isBlank()) return
-        
-        if (storeAddress.length < 10) {
-            _uiState.value = _uiState.value.copy(storeAddressError = "Địa chỉ cửa hàng quá ngắn")
-        } else {
-            _uiState.value = _uiState.value.copy(storeAddressError = null)
         }
     }
     

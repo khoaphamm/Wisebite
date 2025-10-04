@@ -110,42 +110,6 @@ fun SignupScreen(
                 isPassword = true,
                 errorMessage = uiState.confirmPasswordError
             )
-            
-            // Store Information Section
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = "Thông tin cửa hàng",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            
-            MerchantInputField(
-                label = "Tên cửa hàng",
-                value = uiState.storeName,
-                onValueChange = viewModel::updateStoreName,
-                placeholder = "Nhập tên cửa hàng của bạn",
-                errorMessage = uiState.storeNameError
-            )
-            
-            MerchantInputField(
-                label = "Địa chỉ cửa hàng",
-                value = uiState.storeAddress,
-                onValueChange = viewModel::updateStoreAddress,
-                placeholder = "Nhập địa chỉ cửa hàng",
-                singleLine = false,
-                maxLines = 3,
-                errorMessage = uiState.storeAddressError
-            )
-            
-            MerchantInputField(
-                label = "Loại hình kinh doanh (Tùy chọn)",
-                value = uiState.cuisineType,
-                onValueChange = viewModel::updateCuisineType,
-                placeholder = "VD: Quán ăn, Cà phê, Bánh ngọt..."
-            )
         }
 
         // Display general error messages

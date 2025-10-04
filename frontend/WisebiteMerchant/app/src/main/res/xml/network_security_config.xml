@@ -7,7 +7,7 @@
         <domain includeSubdomains="true">127.0.0.1</domain>
     </domain-config>
     
-    <domain-config cleartextTrafficPermitted="false">
+    <domain-config cleartextTrafficPermitted="true">
         <!-- Allow HTTPS for ngrok tunnel -->
         <domain includeSubdomains="true">ngrok-free.app</domain>
         <domain includeSubdomains="true">ngrok.io</domain>

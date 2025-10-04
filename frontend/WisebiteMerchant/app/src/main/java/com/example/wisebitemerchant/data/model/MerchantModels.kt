@@ -31,8 +31,7 @@ data class StoreCreateRequest(
     val name: String,
     val description: String? = null,
     val address: String,
-    @SerializedName("logo_url") val logoUrl: String? = null,
-    @SerializedName("cuisine_type") val cuisineType: String? = null
+    @SerializedName("logo_url") val logoUrl: String? = null
 )
 
 data class LoginRequest(
