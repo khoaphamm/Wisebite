@@ -31,14 +31,49 @@ def create_order(session: SessionDep, current_user: CurrentUser, order_in: Order
 @router.get("/me", response_model=PaginationResponse[OrderPublic])
 def get_my_orders(session: SessionDep, current_user: CurrentUser):
     """ CUSTOMER: Get their own order history. """
+    logger.info(f"Getting orders for customer: {current_user.id}")
+    
     orders = crud.get_orders_by_customer(session=session, customer_id=current_user.id)
-    return PaginationResponse[OrderPublic](data=orders, count=len(orders))
+    logger.info(f"Found {len(orders)} orders for customer {current_user.id}")
+    
+    # Convert to OrderPublic explicitly (same approach as vendor endpoint)
+    order_publics = []
+    for i, order in enumerate(orders):
+        logger.info(f"Order {i+1}: ID={order.id}")
+        logger.info(f"  Customer: {order.customer}")
+        logger.info(f"  Customer ID: {order.customer_id}")
+        logger.info(f"  Items count: {len(order.items) if order.items else 0}")
+        
+        # Convert Order to OrderPublic manually
+        try:
+            order_public = OrderPublic(
+                id=order.id,
+                customer_id=order.customer_id,
+                status=order.status,
+                total_amount=order.total_amount,
+                created_at=order.created_at,
+                delivery_address=order.delivery_address,
+                notes=order.notes,
+                preferred_pickup_time=order.preferred_pickup_time,
+                customer=order.customer,  # This should include the full customer object
+                items=order.items  # This should include the full items with relationships
+            )
+            order_publics.append(order_public)
+            logger.info(f"  Successfully converted order {order.id}")
+            logger.info(f"  OrderPublic customer: {order_public.customer}")
+            logger.info(f"  OrderPublic items: {order_public.items}")
+        except Exception as e:
+            logger.error(f"  Failed to convert order {order.id}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+    
+    return PaginationResponse[OrderPublic](data=order_publics, count=len(order_publics))
 
 @router.get("/my-orders", response_model=PaginationResponse[OrderPublic])
 def get_my_orders_legacy(session: SessionDep, current_user: CurrentUser):
     """ CUSTOMER: Get their own order history (legacy endpoint). """
-    orders = crud.get_orders_by_customer(session=session, customer_id=current_user.id)
-    return PaginationResponse[OrderPublic](data=orders, count=len(orders))
+    # Reuse the same logic as /me endpoint
+    return get_my_orders(session, current_user)
 
 @router.get("/vendor/me", response_model=PaginationResponse[OrderPublic])
 def get_orders_for_my_store(session: SessionDep, current_vendor: CurrentVendor):

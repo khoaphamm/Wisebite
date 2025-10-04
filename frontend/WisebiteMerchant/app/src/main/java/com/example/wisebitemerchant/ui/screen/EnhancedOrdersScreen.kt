@@ -27,6 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wisebitemerchant.data.model.MerchantOrderStatus
 import com.example.wisebitemerchant.data.model.Order
 import com.example.wisebitemerchant.service.MerchantNotificationService
+import com.example.wisebitemerchant.service.MerchantBackgroundService
+import com.example.wisebitemerchant.receiver.BootReceiver
 import com.example.wisebitemerchant.ui.theme.*
 import com.example.wisebitemerchant.ui.viewmodel.OrderViewModel
 import com.example.wisebitemerchant.ui.viewmodel.OrderViewModelFactory
@@ -178,6 +180,39 @@ fun EnhancedOrdersScreen() {
                                 .align(Alignment.TopEnd)
                         )
                     }
+                }
+                
+                // Background notifications toggle
+                var backgroundNotificationsEnabled by remember { 
+                    mutableStateOf(
+                        context.getSharedPreferences("wisebite_merchant_prefs", android.content.Context.MODE_PRIVATE)
+                            .getBoolean("auto_start_notifications", false)
+                    )
+                }
+                
+                IconButton(onClick = {
+                    val authToken = context.getSharedPreferences("wisebite_merchant_prefs", android.content.Context.MODE_PRIVATE)
+                        .getString("auth_token", null)
+                    
+                    if (!authToken.isNullOrEmpty()) {
+                        if (backgroundNotificationsEnabled) {
+                            // Stop background service
+                            MerchantBackgroundService.stopService(context)
+                            BootReceiver.clearAutoStartSettings(context)
+                            backgroundNotificationsEnabled = false
+                        } else {
+                            // Start background service
+                            MerchantBackgroundService.startService(context, authToken)
+                            BootReceiver.saveAutoStartSettings(context, authToken, true)
+                            backgroundNotificationsEnabled = true
+                        }
+                    }
+                }) {
+                    Icon(
+                        imageVector = if (backgroundNotificationsEnabled) Icons.Default.ToggleOn else Icons.Default.ToggleOff,
+                        contentDescription = "Toggle Background Notifications",
+                        tint = if (backgroundNotificationsEnabled) Green600 else Color.Gray
+                    )
                 }
             }
         )

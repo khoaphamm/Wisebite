@@ -403,7 +403,10 @@ private fun formatDate(dateString: String): String {
 }
 
 private fun getStoreName(order: Order): String {
-    // Get store name from the first item that has store information
+    // First, try to get store name directly from order.store
+    order.store?.name?.let { return it }
+    
+    // Fallback: Get store name from the first item that has store information
     order.items?.forEach { item ->
         item.surpriseBag?.store?.name?.let { return it }
         item.foodItem?.store?.name?.let { return it }
@@ -412,7 +415,10 @@ private fun getStoreName(order: Order): String {
 }
 
 private fun getStoreAddress(order: Order): String? {
-    // Get store address from the first item that has store information
+    // First, try to get store address directly from order.store
+    order.store?.address?.let { return it }
+    
+    // Fallback: Get store address from the first item that has store information
     order.items?.forEach { item ->
         item.surpriseBag?.store?.address?.let { return it }
         item.foodItem?.store?.address?.let { return it }
