@@ -30,6 +30,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -82,6 +83,9 @@ dependencies {
     implementation("androidx.credentials:credentials:1.2.2")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    
+    // Core library desugaring for java.time APIs on API < 26
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

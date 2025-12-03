@@ -73,7 +73,7 @@ data class SurpriseBag(
                 val outputFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
                 val startTime = inputFormat.parse(pickupStartTime)
                 val endTime = inputFormat.parse(pickupEndTime)
-                "${outputFormat.format(startTime)} - ${outputFormat.format(endTime)}"
+                "${outputFormat.format(startTime ?: Date())} - ${outputFormat.format(endTime ?: Date())}"
             } catch (e: Exception) {
                 "Pickup time not available"
             }

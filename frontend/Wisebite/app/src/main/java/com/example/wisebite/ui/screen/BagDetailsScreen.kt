@@ -822,7 +822,7 @@ fun BagDetailsScreen(
                                         text = if (selectedPickupTime.isNotEmpty()) {
                                             "Nhận lúc: $selectedPickupTime hôm nay"
                                         } else if (selectedPickupTimeFormatted != null) {
-                                            "Nhận lúc: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectedPickupTimeFormatted)} hôm nay"
+                                            "Nhận lúc: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectedPickupTimeFormatted ?: Date())} hôm nay"
                                         } else {
                                             "Chọn thời gian nhận hàng"
                                         },
