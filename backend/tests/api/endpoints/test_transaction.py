@@ -26,13 +26,14 @@ def test_create_payment_transaction_success(client: TestClient):
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     customer_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Setup store and food item
+    # Setup store and food item - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
     
     food_data = create_random_food_item_data(store_id)
-    food_data["original_price"] = 50000.0
+    food_data["standard_price"] = 50000.0
+    food_data["total_quantity"] = 10
     food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
     food_id = food_response.json()["id"]
     
@@ -101,12 +102,14 @@ def test_create_transaction_unauthorized_order(client: TestClient):
     customer1_client, _, _ = create_authenticated_client(client, "customer")
     customer2_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create order with customer1
+    # Create order with customer1 - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
     
     food_data = create_random_food_item_data(store_id)
+    food_data["standard_price"] = 25000.0
+    food_data["total_quantity"] = 10
     food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
     food_id = food_response.json()["id"]
     
@@ -134,13 +137,14 @@ def test_create_transaction_invalid_amount(client: TestClient):
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     customer_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create order
+    # Create order - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
     
     food_data = create_random_food_item_data(store_id)
-    food_data["original_price"] = 50000.0
+    food_data["standard_price"] = 50000.0
+    food_data["total_quantity"] = 10
     food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
     food_id = food_response.json()["id"]
     
@@ -168,13 +172,14 @@ def test_create_transaction_already_paid(client: TestClient):
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     customer_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create and pay for order
+    # Create and pay for order - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
     
     food_data = create_random_food_item_data(store_id)
-    food_data["original_price"] = 50000.0
+    food_data["standard_price"] = 50000.0
+    food_data["total_quantity"] = 10
     food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
     food_id = food_response.json()["id"]
     
@@ -204,7 +209,7 @@ def test_get_user_transactions(client: TestClient):
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     customer_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create and pay for order
+    # Create and pay for order - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
@@ -223,7 +228,7 @@ def test_get_user_transactions(client: TestClient):
     transaction_data = {
         "order_id": order_id,
         "payment_method": "credit_card",
-        "amount": food_data["original_price"]
+        "amount": food_data["standard_price"]
     }
     customer_client.post("/api/v1/transactions", json=transaction_data)
     
@@ -238,7 +243,7 @@ def test_get_user_transactions(client: TestClient):
     # Verify transaction details
     transaction = response_data["data"][0]
     assert transaction["order_id"] == order_id
-    assert transaction["amount"] == food_data["original_price"]
+    assert transaction["amount"] == food_data["standard_price"]
 
 
 @pytest.mark.integration
@@ -247,7 +252,7 @@ def test_get_transaction_by_id(client: TestClient):
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     customer_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create transaction
+    # Create transaction - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
@@ -266,7 +271,7 @@ def test_get_transaction_by_id(client: TestClient):
     transaction_data = {
         "order_id": order_id,
         "payment_method": "credit_card",
-        "amount": food_data["original_price"]
+        "amount": food_data["standard_price"]
     }
     transaction_response = customer_client.post("/api/v1/transactions", json=transaction_data)
     transaction_id = transaction_response.json()["id"]
@@ -287,7 +292,7 @@ def test_get_transaction_unauthorized(client: TestClient):
     customer1_client, _, _ = create_authenticated_client(client, "customer")
     customer2_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create transaction with customer1
+    # Create transaction with customer1 - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
@@ -306,7 +311,7 @@ def test_get_transaction_unauthorized(client: TestClient):
     transaction_data = {
         "order_id": order_id,
         "payment_method": "credit_card",
-        "amount": food_data["original_price"]
+        "amount": food_data["standard_price"]
     }
     transaction_response = customer1_client.post("/api/v1/transactions", json=transaction_data)
     transaction_id = transaction_response.json()["id"]
@@ -322,7 +327,7 @@ def test_refund_transaction_success(client: TestClient):
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     customer_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create and pay for order
+    # Create and pay for order - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
@@ -341,19 +346,19 @@ def test_refund_transaction_success(client: TestClient):
     transaction_data = {
         "order_id": order_id,
         "payment_method": "credit_card",
-        "amount": food_data["original_price"]
+        "amount": food_data["standard_price"]
     }
     transaction_response = customer_client.post("/api/v1/transactions", json=transaction_data)
     transaction_id = transaction_response.json()["id"]
     
     # Cancel order (which should trigger refund eligibility)
-    customer_client.post(f"/api/v1/order/{order_id}/cancel")
+    customer_client.post(f"/api/v1/orders/{order_id}/cancel")
     
     # Create refund
     refund_data = {
         "transaction_id": transaction_id,
         "reason": "Order cancelled by customer",
-        "amount": food_data["original_price"]
+        "amount": food_data["standard_price"]
     }
     
     response = customer_client.post("/api/v1/transactions/refund", json=refund_data)
@@ -375,12 +380,13 @@ def test_filter_transactions_by_type(client: TestClient):
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     customer_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create payment and refund transactions
+    # Create payment and refund transactions - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
     
     food_data = create_random_food_item_data(store_id)
+    food_data["total_quantity"] = 20  # Ensure enough quantity for multiple orders
     food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
     food_id = food_response.json()["id"]
     
@@ -396,7 +402,7 @@ def test_filter_transactions_by_type(client: TestClient):
         transaction_data = {
             "order_id": order_id,
             "payment_method": "credit_card",
-            "amount": food_data["original_price"]
+            "amount": food_data["standard_price"]
         }
         customer_client.post("/api/v1/transactions", json=transaction_data)
     
@@ -437,7 +443,7 @@ def test_get_vendor_transaction_summary(client: TestClient):
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     customer_client, _, _ = create_authenticated_client(client, "customer")
     
-    # Create store and receive payments
+    # Create store and receive payments - use standard_price instead of original_price
     store_data = create_random_store_data()
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
@@ -457,7 +463,7 @@ def test_get_vendor_transaction_summary(client: TestClient):
     transaction_data = {
         "order_id": order_id,
         "payment_method": "credit_card",
-        "amount": food_data["original_price"]
+        "amount": food_data["standard_price"]
     }
     customer_client.post("/api/v1/transactions", json=transaction_data)
     
@@ -469,5 +475,5 @@ def test_get_vendor_transaction_summary(client: TestClient):
     assert_response_contains_fields(response_data, [
         "total_revenue", "total_transactions", "pending_payouts"
     ])
-    assert response_data["total_revenue"] >= food_data["original_price"]
+    assert response_data["total_revenue"] >= food_data["standard_price"]
     assert response_data["total_transactions"] >= 1

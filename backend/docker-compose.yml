@@ -46,8 +46,8 @@ services:
 
   # Service 3: Test PostgreSQL Database (separate from main DB)
   test_db:
-    # Use the same PostgreSQL image as main DB
-    image: postgres:15
+    # Use PostGIS image (same as main DB) for geometry type support
+    image: postgis/postgis:15-3.4
     # Use separate volume for test data (optional, can be ephemeral)
     volumes:
       - test_postgres_data:/var/lib/postgresql/data/

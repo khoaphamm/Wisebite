@@ -118,8 +118,8 @@ data class FoodItem(
     @SerializedName("description")
     val description: String?,
     
-    @SerializedName("original_price")
-    val originalPrice: Double,
+    @SerializedName("standard_price")
+    val standardPrice: Double,
     
     @SerializedName("store")
     val store: Store?

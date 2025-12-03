@@ -30,11 +30,11 @@ def test_create_order_success(client: TestClient):
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
     
-    # Create food items
+    # Create food items - use total_quantity instead of quantity
     food_items = []
     for i in range(2):
         food_data = create_random_food_item_data(store_id)
-        food_data["quantity"] = 10  # Ensure sufficient quantity
+        food_data["total_quantity"] = 10  # Ensure sufficient quantity
         food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
         food_items.append(food_response.json())
     
@@ -46,7 +46,6 @@ def test_create_order_success(client: TestClient):
             {"food_item_id": food_items[0]["id"], "quantity": 2},
             {"food_item_id": food_items[1]["id"], "quantity": 1}
         ],
-        "store_id": store_id,
         "delivery_address": "123 Test Street, Ho Chi Minh City",
         "notes": "Please handle with care"
     }
@@ -76,7 +75,7 @@ def test_create_order_insufficient_quantity(client: TestClient):
     store_id = store_response.json()["id"]
     
     food_data = create_random_food_item_data(store_id)
-    food_data["quantity"] = 2  # Only 2 available
+    food_data["total_quantity"] = 2  # Only 2 available
     food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
     food_id = food_response.json()["id"]
     
@@ -85,7 +84,6 @@ def test_create_order_insufficient_quantity(client: TestClient):
     
     order_data = {
         "items": [{"food_item_id": food_id, "quantity": 5}],  # More than available
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     
@@ -109,7 +107,6 @@ def test_create_order_nonexistent_food_item(client: TestClient):
     fake_food_id = str(uuid.uuid4())
     order_data = {
         "items": [{"food_item_id": fake_food_id, "quantity": 1}],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     
@@ -142,10 +139,9 @@ def test_get_customer_orders(client: TestClient):
     food_response = vendor_client.post("/api/v1/food-items/", json=food_data)
     food_id = food_response.json()["id"]
     
-    # Create order
+    # Create order - removed store_id from order data (determined from items)
     order_data = {
         "items": [{"food_item_id": food_id, "quantity": 1}],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     customer_client.post("/api/v1/orders/", json=order_data)
@@ -177,7 +173,6 @@ def test_get_vendor_orders(client: TestClient):
     # Customer creates order
     order_data = {
         "items": [{"food_item_id": food_id, "quantity": 1}],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     customer_client.post("/api/v1/orders/", json=order_data)
@@ -208,7 +203,6 @@ def test_get_order_by_id(client: TestClient):
     
     order_data = {
         "items": [{"food_item_id": food_id, "quantity": 1}],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     order_response = customer_client.post("/api/v1/orders/", json=order_data)
@@ -239,7 +233,6 @@ def test_update_order_status_by_vendor(client: TestClient):
     
     order_data = {
         "items": [{"food_item_id": food_id, "quantity": 1}],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     order_response = customer_client.post("/api/v1/orders/", json=order_data)
@@ -271,7 +264,6 @@ def test_cancel_order_by_customer(client: TestClient):
     
     order_data = {
         "items": [{"food_item_id": food_id, "quantity": 1}],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     order_response = customer_client.post("/api/v1/orders/", json=order_data)
@@ -296,14 +288,16 @@ def test_order_total_calculation(client: TestClient):
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
     
-    # Create food items with specific prices
+    # Create food items with specific prices - use standard_price instead of original_price
     food1_data = create_random_food_item_data(store_id)
-    food1_data["original_price"] = 25000.0
+    food1_data["standard_price"] = 25000.0
+    food1_data["total_quantity"] = 10
     food1_response = vendor_client.post("/api/v1/food-items/", json=food1_data)
     food1_id = food1_response.json()["id"]
     
     food2_data = create_random_food_item_data(store_id)
-    food2_data["original_price"] = 35000.0
+    food2_data["standard_price"] = 35000.0
+    food2_data["total_quantity"] = 10
     food2_response = vendor_client.post("/api/v1/food-items/", json=food2_data)
     food2_id = food2_response.json()["id"]
     
@@ -313,7 +307,6 @@ def test_order_total_calculation(client: TestClient):
             {"food_item_id": food1_id, "quantity": 2},  # 2 × 25000 = 50000
             {"food_item_id": food2_id, "quantity": 1}   # 1 × 35000 = 35000
         ],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     
@@ -345,7 +338,6 @@ def test_order_unauthorized_access(client: TestClient):
     
     order_data = {
         "items": [{"food_item_id": food_id, "quantity": 1}],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     order_response = customer1_client.post("/api/v1/orders/", json=order_data)
@@ -375,7 +367,6 @@ def test_order_accepted_notification_sent_to_merchant_and_customer(client: TestC
     # Customer creates order
     order_data = {
         "items": [{"food_item_id": food_id, "quantity": 1}],
-        "store_id": store_id,
         "delivery_address": "123 Test Street"
     }
     order_response = customer_client.post("/api/v1/orders/", json=order_data)

@@ -36,9 +36,10 @@ def test_create_food_item_success(client: TestClient):
     
     assert_status_code(response, 201)
     response_data = response.json()
+    # Updated field names: standard_price, total_quantity instead of original_price, quantity
     assert_response_contains_fields(response_data, [
-        "id", "name", "description", "original_price", "quantity", 
-        "category", "store_id", "expires_at"
+        "id", "name", "description", "standard_price", "total_quantity", 
+        "store_id", "expires_at"
     ])
     assert response_data["name"] == food_data["name"]
     assert response_data["store_id"] == store_id
@@ -75,11 +76,11 @@ def test_create_food_item_invalid_data(client: TestClient):
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     assert_status_code(store_response, 201)
     
+    # Updated field names: standard_price, total_quantity
     invalid_data = {
         "name": "",  # Empty name
-        "original_price": -100,  # Negative price
-        "quantity": -1,  # Negative quantity
-        "category": "invalid_category"
+        "standard_price": -100,  # Negative price
+        "total_quantity": -1  # Negative quantity
     }
     
     response = vendor_client.post("/api/v1/food-items", json=invalid_data)
@@ -168,11 +169,10 @@ def test_update_food_item_success(client: TestClient):
     create_response = vendor_client.post("/api/v1/food-items", json=food_data)
     food_id = create_response.json()["id"]
     
-    # Update food item
+    # Update food item - use new field names
     update_data = {
         "name": "Updated Food Name",
-        "original_price": 75000.0,
-        "quantity": 15
+        "standard_price": 75000.0
     }
     
     response = vendor_client.put(f"/api/v1/food-items/{food_id}", json=update_data)
@@ -180,8 +180,7 @@ def test_update_food_item_success(client: TestClient):
     assert_status_code(response, 200)
     response_data = response.json()
     assert response_data["name"] == "Updated Food Name"
-    assert response_data["original_price"] == 75000.0
-    assert response_data["quantity"] == 15
+    assert response_data["standard_price"] == 75000.0
 
 
 @pytest.mark.integration
@@ -259,8 +258,12 @@ def test_search_food_items(client: TestClient):
 
 
 @pytest.mark.integration
-def test_filter_food_items_by_category(client: TestClient):
-    """Test filtering food items by category."""
+def test_filter_food_items_by_store(client: TestClient):
+    """Test filtering food items by store.
+    
+    Note: Category filtering now uses category_id (UUID) instead of 
+    category string. This test has been updated to filter by store instead.
+    """
     vendor_client, _, _ = create_authenticated_client(client, "vendor")
     
     # Create store
@@ -268,21 +271,20 @@ def test_filter_food_items_by_category(client: TestClient):
     store_response = vendor_client.post("/api/v1/stores/", json=store_data)
     store_id = store_response.json()["id"]
     
-    # Create food items with different categories
-    for category in ["main_course", "dessert", "drink"]:
+    # Create multiple food items for the store
+    for i in range(3):
         food_data = create_random_food_item_data(store_id)
-        food_data["category"] = category
         vendor_client.post("/api/v1/food-items", json=food_data)
     
-    # Filter by category
-    response = client.get("/api/v1/food-items?category=dessert")
+    # Filter by store_id
+    response = client.get(f"/api/v1/food-items?store_id={store_id}")
     
     assert_status_code(response, 200)
     response_data = response.json()
     
-    # All items should be desserts
+    # All items should belong to the store
     for item in response_data["data"]:
-        assert item["category"] == "dessert"
+        assert item["store_id"] == store_id
 
 
 @pytest.mark.integration

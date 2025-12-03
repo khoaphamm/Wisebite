@@ -1,11 +1,14 @@
 package com.example.wisebite.service
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.example.wisebite.R
 import com.example.wisebite.data.repository.NotificationRepository
 import com.example.wisebite.data.model.Notification as ApiNotification
@@ -227,21 +230,37 @@ class NotificationService private constructor(private val context: Context) {
     
     private fun showPushNotification(notification: WisebiteNotification) {
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification) // You'll need to add this icon
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(notification.title)
             .setContentText(notification.message)
             .setPriority(if (notification.isImportant) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setVibrate(if (notification.isImportant) longArrayOf(0, 300, 200, 300) else longArrayOf(0, 200))
-        
+
         try {
-            with(NotificationManagerCompat.from(context)) {
-                notify(notification.id.hashCode(), notificationBuilder.build())
+            // For Android 13+ (TIRAMISU) the runtime POST_NOTIFICATIONS permission is required.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val hasPermission = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (hasPermission) {
+                    NotificationManagerCompat.from(context).notify(notification.id.hashCode(), notificationBuilder.build())
+                } else {
+                    // Permission not granted; skip showing notification from a background/service context.
+                    // Optionally log or store the notification so an Activity can show it after permission is granted.
+                    println("POST_NOTIFICATIONS permission not granted — skipping notification: ${notification.id}")
+                }
+            } else {
+                // Pre-Android 13 no runtime permission required
+                NotificationManagerCompat.from(context).notify(notification.id.hashCode(), notificationBuilder.build())
             }
         } catch (e: SecurityException) {
             println("Permission denied for showing notification: ${e.message}")
         }
     }
+
     
     // Simulate real-time notifications for testing (fallback when WebSocket is not available)
     fun simulateOrderNotification(orderId: String, status: String) {

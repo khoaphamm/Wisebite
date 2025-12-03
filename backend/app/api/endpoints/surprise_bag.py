@@ -4,6 +4,7 @@ from datetime import datetime
 import uuid
 from app.api.deps import SessionDep, CurrentVendor, CurrentUser
 from app import crud
+from app.models import Order
 from app.schemas.surprise_bag import (
     SurpriseBagCreate, 
     SurpriseBagPublic, 
@@ -161,9 +162,9 @@ def book_surprise_bag(
             detail="Insufficient quantity available"
         )
     
-    # Check time window
+    # Check time window - use available_from and available_until for booking window
     now = datetime.now()
-    if now < bag.pickup_start_time or now > bag.pickup_end_time:
+    if now < bag.available_from or now > bag.available_until:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Booking window has closed"
@@ -200,7 +201,7 @@ def delete_surprise_bag(
     crud.delete_surprise_bag(session=session, bag_id=bag_id)
     return None
 
-@router.post("/booking/{booking_id}/cancel")
+@router.post("/booking/{booking_id}/cancel", response_model=SurpriseBagBookingPublic)
 def cancel_booking(
     session: SessionDep,
     current_user: CurrentUser,
@@ -221,4 +222,14 @@ def cancel_booking(
             detail="Not authorized to cancel this booking"
         )
     
-    return crud.cancel_surprise_bag_booking(session=session, booking_id=booking_id)
+    result = crud.cancel_surprise_bag_booking(session=session, booking_id=booking_id)
+    # Ensure result has all required fields for SurpriseBagBookingPublic
+    if "pickup_time" not in result:
+        # Get pickup_time from the order's surprise bag
+        order = session.get(Order, booking_id)
+        if order and order.items:
+            for item in order.items:
+                if item.surprise_bag:
+                    result["pickup_time"] = item.surprise_bag.pickup_start_time
+                    break
+    return result

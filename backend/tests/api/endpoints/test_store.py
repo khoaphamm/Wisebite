@@ -144,10 +144,10 @@ def test_list_nearby_stores_coordinate_validation(client: TestClient):
 
 
 @pytest.mark.integration
-def test_update_store_owner(authenticated_vendor_client: TestClient, test_store, test_vendor):
+def test_update_store_owner(authenticated_vendor_client: TestClient, session, test_store, test_vendor):
     """Test store owner can update their store."""
-    # Setup authenticated client to use the store owner's credentials
-    authenticated_vendor_client.app.dependency_overrides.clear()
+    # Note: authenticated_vendor_client already has correct dependency overrides set up
+    # No need to clear them - they're already configured in the fixture
     
     update_data = {
         "name": "Updated Store Name",

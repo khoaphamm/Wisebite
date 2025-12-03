@@ -9,7 +9,7 @@ from shapely.geometry import mapping
 from app.models import OrderStatus
 from .user import UserPublic
 from .surprise_bag import SurpriseBagPublic
-from .food_item import FoodItemPublic
+from .food_item import FoodItemResponse
 from .store import StorePublic
 
 # --- CREATION SCHEMAS (REWRITTEN for WiseBite) ---
@@ -42,7 +42,7 @@ class OrderItemPublic(SQLModel):
     quantity: int
     price_per_item: float
     surprise_bag: Optional[SurpriseBagPublic] = None # Nested surprise bag details
-    food_item: Optional[FoodItemPublic] = None # Nested food item details
+    food_item: Optional[FoodItemResponse] = None # Nested food item details
 
 class OrderPublic(SQLModel):
     id: uuid.UUID
@@ -83,7 +83,9 @@ class OrderPublic(SQLModel):
             )
         
         # Check food item store as fallback
-        if first_item.food_item and first_item.food_item.store:
+        # Note: FoodItemResponse only has store_id, not nested store object
+        # Store information would need to be fetched separately if needed
+        if first_item.food_item and hasattr(first_item.food_item, 'store') and first_item.food_item.store:
             return StorePublic(
                 id=first_item.food_item.store.id,
                 name=first_item.food_item.store.name,

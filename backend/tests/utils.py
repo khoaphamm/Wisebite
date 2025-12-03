@@ -16,9 +16,7 @@ def create_random_user_data(role: str = "customer") -> Dict[str, Any]:
         "email": f"test{random_id}@example.com",
         "phone_number": f"091234{random_id[:4]}",
         "password": "testpassword123",
-        "role": role,
-        "gender": random.choice(["male", "female", "other"]),
-        "birth_date": "1990-01-01"
+        "role": role
     }
 
 
@@ -35,19 +33,26 @@ def create_random_store_data() -> Dict[str, Any]:
 
 
 def create_random_food_item_data(store_id: Optional[str] = None) -> Dict[str, Any]:
-    """Generate random food item data for testing."""
+    """Generate random food item data for testing.
+    
+    Updated to reflect new FoodItem model with:
+    - standard_price instead of original_price
+    - total_quantity instead of quantity
+    - category_id (UUID) instead of category (string)
+    """
     random_id = str(uuid.uuid4())[:8]
     future_time = datetime.now() + timedelta(hours=random.randint(2, 24))
     
     data = {
         "name": f"Test Food {random_id}",
         "description": f"A delicious test food item {random_id}",
-        "original_price": round(random.uniform(10000, 100000), 2),
-        "quantity": random.randint(1, 20),
-        "category": random.choice(["main_course", "dessert", "drink", "snack"]),
+        "standard_price": round(random.uniform(10000, 100000), 2),
+        "total_quantity": random.randint(1, 20),
         "expires_at": future_time.isoformat(),
         "ingredients": f"Test ingredients for {random_id}",
-        "allergens": random.choice(["nuts", "dairy", "gluten", None])
+        "allergens": random.choice(["nuts", "dairy", "gluten", None]),
+        "is_fresh": True,
+        "unit": "piece"
     }
     
     if store_id:
@@ -57,27 +62,45 @@ def create_random_food_item_data(store_id: Optional[str] = None) -> Dict[str, An
 
 
 def create_random_surprise_bag_data(store_id: Optional[str] = None) -> Dict[str, Any]:
-    """Generate random surprise bag data for testing."""
+    """Generate random surprise bag data for testing.
+    
+    Updated to include all required fields for new SurpriseBag schema:
+    - available_from, available_until (availability window)
+    - discount_percentage (calculated from prices)
+    - bag_type, max_per_customer, is_active, is_auto_generated
+    """
     random_id = str(uuid.uuid4())[:8]
     now = datetime.now()
-    # DEMO MODE: Create a pickup window far in the future for testing
-    pickup_start = now + timedelta(days=random.randint(1, 30))  # Start 1-30 days from now  
-    pickup_end = now + timedelta(days=random.randint(1, 30), hours=random.randint(4, 8))     # Ends 4-8 hours after start
+    
+    # DEMO MODE: Create windows far in the future for testing
+    days_offset = random.randint(1, 30)
+    available_from = now + timedelta(days=days_offset - 1)  # Available 1 day before pickup
+    available_until = now + timedelta(days=days_offset, hours=random.randint(2, 4))
+    pickup_start = now + timedelta(days=days_offset)
+    pickup_end = now + timedelta(days=days_offset, hours=random.randint(4, 8))
     
     # Ensure pricing constraint: discounted_price < original_value
     original_value = round(random.uniform(30000, 150000), 2)
-    # Set discount price to be 50-80% of original value to ensure it's always less
-    discount_percentage = random.uniform(0.5, 0.8)
-    discounted_price = round(original_value * discount_percentage, 2)
+    # Set discount to be 20-50% off (discount_percentage is 0.2-0.5)
+    discount_rate = random.uniform(0.2, 0.5)
+    discounted_price = round(original_value * (1 - discount_rate), 2)
+    discount_percentage = round(discount_rate, 2)
     
     data = {
         "name": f"Test Surprise Bag {random_id}",
         "description": f"Surprise bag with mystery items {random_id}",
+        "bag_type": random.choice(["single_item", "combo"]),
         "original_value": original_value,
         "discounted_price": discounted_price,
+        "discount_percentage": discount_percentage,
         "quantity_available": random.randint(1, 10),
+        "max_per_customer": random.randint(1, 3),
+        "available_from": available_from.isoformat(),
+        "available_until": available_until.isoformat(),
         "pickup_start_time": pickup_start.isoformat(),
-        "pickup_end_time": pickup_end.isoformat()
+        "pickup_end_time": pickup_end.isoformat(),
+        "is_active": True,
+        "is_auto_generated": False
     }
     
     if store_id:

@@ -420,7 +420,15 @@ def delete_store(session: Session, store_id: uuid.UUID) -> None:
 # ============================== FoodItem CRUD (NEW) ==========================================
 
 def create_food_item(session: Session, item_create: FoodItemCreate, store_id: uuid.UUID) -> FoodItem:
-    db_item = FoodItem.model_validate(item_create, update={"store_id": store_id})
+    # Convert to dict to allow setting available_quantity if not provided
+    item_data = item_create.model_dump()
+    item_data["store_id"] = store_id
+    
+    # If available_quantity is not set, set it to total_quantity
+    if "available_quantity" not in item_data or item_data.get("available_quantity") is None:
+        item_data["available_quantity"] = item_data.get("total_quantity", 0)
+    
+    db_item = FoodItem.model_validate(item_data)
     session.add(db_item)
     session.commit()
     session.refresh(db_item)
@@ -628,16 +636,40 @@ def cancel_surprise_bag_booking(session: Session, booking_id: uuid.UUID) -> dict
     # Update order status
     order.status = OrderStatus.CANCELLED
     
-    # Restore surprise bag quantity
+    # Restore quantities for both surprise bags and food items
+    surprise_bag_id = None
+    quantity = 0
+    pickup_time = None
+    
     for item in order.items:
-        if item.surprise_bag:
+        if item.surprise_bag_id and item.surprise_bag:
             item.surprise_bag.quantity_available += item.quantity
             session.add(item.surprise_bag)
+            surprise_bag_id = item.surprise_bag_id
+            quantity = item.quantity
+            pickup_time = item.surprise_bag.pickup_start_time
+        elif item.food_item_id and item.food_item:
+            # Restore food item quantities
+            item.food_item.available_quantity += item.quantity
+            item.food_item.reserved_quantity -= item.quantity
+            if item.food_item.reserved_quantity < 0:
+                item.food_item.reserved_quantity = 0
+            session.add(item.food_item)
     
     session.add(order)
     session.commit()
+    session.refresh(order)
     
-    return {"id": booking_id, "status": "cancelled"}
+    # Return all required fields for SurpriseBagBookingPublic
+    return {
+        "id": booking_id,
+        "surprise_bag_id": surprise_bag_id or order.items[0].surprise_bag_id if order.items else uuid.uuid4(),
+        "customer_id": order.customer_id,
+        "quantity": quantity or (order.items[0].quantity if order.items else 0),
+        "pickup_time": pickup_time or (order.items[0].surprise_bag.pickup_start_time if order.items and order.items[0].surprise_bag else datetime.now()),
+        "status": "cancelled",
+        "created_at": order.created_at
+    }
 
 # ============================== Order CRUD (ADAPTED) =========================================
 
@@ -645,6 +677,7 @@ def get_order_by_id(session: Session, order_id: uuid.UUID) -> Optional[Order]:
     # Use options to pre-load related data to prevent extra queries (N+1 problem)
     statement = select(Order).where(Order.id == order_id).options(
         selectinload(Order.items).selectinload(OrderItem.surprise_bag).selectinload(SurpriseBag.store),
+        selectinload(Order.items).selectinload(OrderItem.food_item).selectinload(FoodItem.store),
         selectinload(Order.customer)
     )
     return session.exec(statement).first()
@@ -699,26 +732,28 @@ def create_order(session: Session, order_create: OrderCreate, customer_id: uuid.
                 food_item = session.get(FoodItem, item.food_item_id)
                 if not food_item:
                     raise ValueError(f"Food item with id {item.food_item_id} not found.")
-                if food_item.quantity < item.quantity:
-                    raise ValueError(f"Not enough stock for {food_item.name}. Available: {food_item.quantity}, Requested: {item.quantity}")
+                # Use available_quantity instead of quantity
+                if food_item.available_quantity < item.quantity:
+                    raise ValueError(f"Not enough stock for {food_item.name}. Available: {food_item.available_quantity}, Requested: {item.quantity}")
 
                 # Set primary store from first item
                 if primary_store_id is None:
                     primary_store_id = food_item.store_id
 
-                # Decrease stock
-                food_item.quantity -= item.quantity
+                # Decrease stock - update available_quantity and reserved_quantity
+                food_item.available_quantity -= item.quantity
+                food_item.reserved_quantity += item.quantity
                 session.add(food_item)
 
-                # Calculate price for this line item and add to total
-                item_total = food_item.original_price * item.quantity
+                # Calculate price for this line item and add to total - use standard_price instead of original_price
+                item_total = food_item.standard_price * item.quantity
                 total_amount += item_total
 
                 # Create the OrderItem model
                 db_item = OrderItem(
                     food_item_id=item.food_item_id,
                     quantity=item.quantity,
-                    price_per_item=food_item.original_price
+                    price_per_item=food_item.standard_price
                 )
                 db_order_items.append(db_item)
             else:
@@ -895,15 +930,26 @@ def update_order_status(session: Session, order_id: uuid.UUID, new_status: Order
     return order
 
 def cancel_order(session: Session, order_id: uuid.UUID) -> Order:
-    """Cancel an order and restore surprise bag quantities."""
+    """Cancel an order and restore quantities for both surprise bags and food items."""
     order = session.get(Order, order_id)
     if order:
         # Restore quantities for all items
         for item in order.items:
-            surprise_bag = session.get(SurpriseBag, item.surprise_bag_id)
-            if surprise_bag:
-                surprise_bag.quantity_available += item.quantity
-                session.add(surprise_bag)
+            if item.surprise_bag_id:
+                surprise_bag = session.get(SurpriseBag, item.surprise_bag_id)
+                if surprise_bag:
+                    surprise_bag.quantity_available += item.quantity
+                    session.add(surprise_bag)
+            elif item.food_item_id:
+                food_item = session.get(FoodItem, item.food_item_id)
+                if food_item:
+                    # Restore available_quantity and decrease reserved_quantity
+                    food_item.available_quantity += item.quantity
+                    food_item.reserved_quantity -= item.quantity
+                    # Ensure reserved_quantity doesn't go negative
+                    if food_item.reserved_quantity < 0:
+                        food_item.reserved_quantity = 0
+                    session.add(food_item)
         
         # Update order status
         order.status = OrderStatus.CANCELLED

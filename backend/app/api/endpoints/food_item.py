@@ -2,12 +2,12 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Query, Depends
 from app.api.deps import SessionDep, CurrentVendor, CurrentUser
 from app import crud
-from app.schemas.food_item import FoodItemCreate, FoodItemPublic, FoodItemUpdate
+from app.schemas.food_item import FoodItemCreate, FoodItemResponse, FoodItemUpdate
 import uuid
 
 router = APIRouter()
 
-@router.post("/", response_model=FoodItemPublic, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=FoodItemResponse, status_code=status.HTTP_201_CREATED)
 def create_food_item(session: SessionDep, current_vendor: CurrentVendor, item_in: FoodItemCreate):
     """ Vendor creates a new regular food item for their store. """
     store = crud.get_store_by_owner_id(session=session, owner_id=current_vendor.id)
@@ -62,7 +62,7 @@ def get_my_food_items(
         return {"data": [], "count": 0}
     return crud.get_food_items_by_store(session=session, store_id=store.id, skip=skip, limit=limit)
 
-@router.get("/{food_item_id}", response_model=FoodItemPublic)
+@router.get("/{food_item_id}", response_model=FoodItemResponse)
 def get_food_item(session: SessionDep, food_item_id: uuid.UUID):
     """ Get a specific food item by ID. """
     food_item = crud.get_food_item(session=session, food_item_id=food_item_id)
@@ -73,7 +73,7 @@ def get_food_item(session: SessionDep, food_item_id: uuid.UUID):
         )
     return food_item
 
-@router.put("/{food_item_id}", response_model=FoodItemPublic)
+@router.put("/{food_item_id}", response_model=FoodItemResponse)
 def update_food_item(
     session: SessionDep, 
     current_vendor: CurrentVendor,

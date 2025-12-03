@@ -7,34 +7,40 @@ from app.api.router import api_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print("🚀 Starting WiseBite API...")
-    try:
-        # Initialize database tables
-        from sqlmodel import SQLModel, create_engine
-        import app.models  # Import models module
-        
-        print("🔄 Connecting to database...")
-        engine = create_engine(str(settings.POSTGRES_URL))
-        print("🔄 Creating tables...")
-        SQLModel.metadata.create_all(engine)
-        print("✅ Database tables created successfully!")
-        
-        # Initialize default admin user
+    print("Starting WiseBite API...")
+    
+    # Skip database initialization during tests (tests use their own database)
+    import os
+    if not os.getenv("TEST_DATABASE_URL"):
         try:
-            from app.core.db import init_db
-            from sqlmodel import Session
-            with Session(engine) as session:
-                init_db(session)
-        except Exception as e:
-            print(f"⚠️  Could not initialize default data: {e}")
+            # Initialize database tables
+            from sqlmodel import SQLModel, create_engine
+            import app.models  # Import models module
             
-    except Exception as e:
-        print(f"❌ Database initialization failed: {e}")
-        print("📋 API will run without database connection")
+            print("Connecting to database...")
+            engine = create_engine(str(settings.POSTGRES_URL))
+            print("Creating tables...")
+            SQLModel.metadata.create_all(engine)
+            print("Database tables created successfully!")
+            
+            # Initialize default admin user
+            try:
+                from app.core.db import init_db
+                from sqlmodel import Session
+                with Session(engine) as session:
+                    init_db(session)
+            except Exception as e:
+                print(f"Warning: Could not initialize default data: {e}")
+                
+        except Exception as e:
+            print(f"Database initialization failed: {e}")
+            print("API will run without database connection")
+    else:
+        print("Test mode: Skipping database initialization")
     
     yield
     # Shutdown
-    print("🛑 Shutting down WiseBite API...")
+    print("Shutting down WiseBite API...")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
