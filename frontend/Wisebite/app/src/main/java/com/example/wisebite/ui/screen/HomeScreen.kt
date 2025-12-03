@@ -3,25 +3,34 @@ package com.example.wisebite.ui.screen
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Store
+import com.example.wisebite.ui.components.SmallAsyncImage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -339,80 +348,219 @@ fun FeaturedSurpriseBagCard(
 ) {
     Card(
         modifier = Modifier
-            .width(200.dp)
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp),
+            .width(220.dp)
+            .clickable { onClick() }
+            .shadow(6.dp, RoundedCornerShape(16.dp)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-            // Store name and category
-            Text(
-                text = bag.store?.name ?: "Unknown Store",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            
-            Text(
-                text = bag.categoryDisplayName,
-                fontSize = 12.sp,
-                color = Orange600,
-                fontWeight = FontWeight.Medium
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Bag name
-            Text(
-                text = bag.name,
-                fontSize = 13.sp,
-                color = WarmGrey700,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Price
-            Row(
-                verticalAlignment = Alignment.CenterVertically
+        Column {
+            // Hero Image Section with real images
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
             ) {
-                Text(
-                    text = bag.formattedDiscountedPrice,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Green600
+                SmallAsyncImage(
+                    imageUrl = bag.imageUrl,
+                    contentDescription = bag.name,
+                    size = 120.dp,
+                    modifier = Modifier.fillMaxSize()
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = bag.formattedOriginalPrice,
-                    fontSize = 11.sp,
-                    color = WarmGrey500,
-                    style = androidx.compose.ui.text.TextStyle(
-                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                
+                // Discount badge in top right
+                if (bag.discountPercentage > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .background(
+                                Color(0xFFFF6B35),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "-${bag.formattedDiscountPercentage}",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                // Store logo circle in bottom left
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .size(32.dp)
+                        .background(
+                            Color.White,
+                            CircleShape
+                        )
+                        .shadow(2.dp, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Store,
+                        contentDescription = null,
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(18.dp)
                     )
-                )
+                }
             }
             
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            // Availability and pickup time
-            Text(
-                text = bag.quantityDisplay,
-                fontSize = 11.sp,
-                color = if (bag.quantityAvailable > 0) WarmGrey600 else Red500
-            )
-            
-            Text(
-                text = bag.pickupTimeDisplay,
-                fontSize = 11.sp,
-                color = WarmGrey600
-            )
+            // Content Section
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                // Store name with enhanced styling
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = bag.store?.name ?: "Unknown Store",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        // Store address with location icon
+                        bag.store?.address?.let { address ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = WarmGrey500,
+                                    modifier = Modifier.size(10.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = address,
+                                    fontSize = 9.sp,
+                                    color = WarmGrey500,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Category badge
+                Box(
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .background(
+                            Orange600.copy(alpha = 0.1f),
+                            RoundedCornerShape(6.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = bag.categoryDisplayName,
+                        fontSize = 10.sp,
+                        color = Orange600,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Bag name with better typography
+                Text(
+                    text = bag.name,
+                    fontSize = 13.sp,
+                    color = WarmGrey800,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Enhanced price section
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = bag.formattedDiscountedPrice,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E7D32)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = bag.formattedOriginalPrice,
+                                fontSize = 10.sp,
+                                color = WarmGrey500,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                )
+                            )
+                        }
+                        
+                        // Savings indicator
+                        if (bag.discountPercentage > 0) {
+                            val savingsAmount = bag.originalValue - bag.discountedPrice
+                            Text(
+                                text = "Tiết kiệm ${String.format("%,.0f", savingsAmount)}đ",
+                                fontSize = 9.sp,
+                                color = Color(0xFF2E7D32),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                    
+                    // Availability indicator with icon
+                    Column(
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccessTime,
+                                contentDescription = null,
+                                tint = WarmGrey500,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = bag.pickupTimeDisplay,
+                                fontSize = 9.sp,
+                                color = WarmGrey600
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(2.dp))
+                        
+                        Text(
+                            text = bag.quantityDisplay,
+                            fontSize = 10.sp,
+                            color = if (bag.quantityAvailable > 0) Color(0xFF2E7D32) else Red500,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -479,3 +627,8 @@ fun StoreCard(
         }
     }
 }
+
+/**
+ * Helper function to determine if a surprise bag is eco-friendly
+ * For demo purposes, all bags are now eco-friendly
+ */

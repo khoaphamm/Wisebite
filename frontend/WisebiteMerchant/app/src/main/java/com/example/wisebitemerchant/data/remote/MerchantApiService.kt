@@ -26,7 +26,7 @@ interface MerchantApiService {
     @GET("api/v1/stores/me")
     suspend fun getMyStore(@Header("Authorization") token: String): Response<Store>
     
-    @POST("api/v1/stores")
+    @POST("api/v1/stores/")
     suspend fun createStore(
         @Header("Authorization") token: String,
         @Body request: StoreCreateRequest

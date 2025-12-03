@@ -247,28 +247,62 @@ def get_store_with_location(session: Session, store_id: uuid.UUID) -> Optional[d
     }
 
 def create_store(session: Session, store_create: StoreCreate, owner_id: uuid.UUID) -> Store:
-    store_data = store_create.model_dump(exclude_unset=True)
+    logger.info(f"CRUD: Creating store for owner {owner_id}")
+    logger.info(f"CRUD: store_create data: {store_create}")
     
-    # Handle location data
-    location = None
-    if store_create.latitude is not None and store_create.longitude is not None:
-        # Create PostGIS POINT geometry using WKTElement
-        point_wkt = f"POINT({store_create.longitude} {store_create.latitude})"
-        location = WKTElement(point_wkt, srid=4326)
-    
-    # Remove latitude/longitude from store_data as they're not direct fields
-    store_data.pop("latitude", None)
-    store_data.pop("longitude", None)
-    store_data["owner_id"] = owner_id
-    
-    db_store = Store(**store_data)
-    if location is not None:
-        db_store.location = location
-    
-    session.add(db_store)
-    session.commit()
-    session.refresh(db_store)
-    return db_store
+    try:
+        store_data = store_create.model_dump(exclude_unset=True)
+        logger.info(f"CRUD: store_data after model_dump: {store_data}")
+        
+        # Handle location data
+        location = None
+        if store_create.latitude is not None and store_create.longitude is not None:
+            logger.info(f"CRUD: Creating location from lat={store_create.latitude}, lon={store_create.longitude}")
+            # Create PostGIS POINT geometry using WKTElement
+            point_wkt = f"POINT({store_create.longitude} {store_create.latitude})"
+            location = WKTElement(point_wkt, srid=4326)
+            logger.info(f"CRUD: Created location WKT: {point_wkt}")
+        else:
+            logger.info("CRUD: No latitude/longitude provided, location will be null")
+        
+        # Remove latitude/longitude from store_data as they're not direct fields
+        store_data.pop("latitude", None)
+        store_data.pop("longitude", None)
+        store_data["owner_id"] = owner_id
+        
+        logger.info(f"CRUD: Final store_data before Store creation: {store_data}")
+        
+        # Validate data lengths
+        if len(store_data.get("name", "")) > 150:
+            raise ValueError(f"Store name too long: {len(store_data['name'])} > 150")
+        if len(store_data.get("address", "")) > 255:
+            raise ValueError(f"Store address too long: {len(store_data['address'])} > 255")
+        if store_data.get("description") and len(store_data["description"]) > 500:
+            raise ValueError(f"Store description too long: {len(store_data['description'])} > 500")
+        
+        logger.info("CRUD: Data validation passed, creating Store object...")
+        db_store = Store(**store_data)
+        logger.info(f"CRUD: Created Store object with ID: {db_store.id}")
+        
+        if location is not None:
+            db_store.location = location
+            logger.info("CRUD: Set location on Store object")
+        
+        logger.info("CRUD: Adding store to session...")
+        session.add(db_store)
+        logger.info("CRUD: Committing store to database...")
+        session.commit()
+        logger.info("CRUD: Refreshing store object...")
+        session.refresh(db_store)
+        logger.info(f"CRUD: Store created successfully with ID: {db_store.id}")
+        return db_store
+        
+    except Exception as e:
+        logger.error(f"CRUD: Failed to create store: {e}")
+        logger.error(f"CRUD: Exception type: {type(e)}")
+        logger.error(f"CRUD: Exception args: {e.args}")
+        session.rollback()
+        raise
 
 def update_store(session: Session, db_store: Store, store_in: StoreUpdate) -> Store:
     store_data = store_in.model_dump(exclude_unset=True)
@@ -395,11 +429,32 @@ def create_food_item(session: Session, item_create: FoodItemCreate, store_id: uu
 # ============================== SurpriseBag CRUD (NEW) =======================================
 
 def create_surprise_bag(session: Session, bag_create: SurpriseBagCreate, store_id: uuid.UUID) -> SurpriseBag:
-    db_bag = SurpriseBag.model_validate(bag_create, update={"store_id": store_id})
-    session.add(db_bag)
-    session.commit()
-    session.refresh(db_bag)
-    return db_bag
+    logger.info(f"CRUD: Creating surprise bag for store {store_id}")
+    logger.info(f"CRUD: bag_create data: {bag_create}")
+    logger.info(f"CRUD: bag_create type: {type(bag_create)}")
+    
+    try:
+        # Validate the model first before creating DB object
+        logger.info("CRUD: Validating SurpriseBagCreate model...")
+        logger.info(f"CRUD: available_from: {bag_create.available_from} (type: {type(bag_create.available_from)})")
+        logger.info(f"CRUD: available_until: {bag_create.available_until} (type: {type(bag_create.available_until)})")
+        logger.info(f"CRUD: pickup_start_time: {bag_create.pickup_start_time} (type: {type(bag_create.pickup_start_time)})")
+        logger.info(f"CRUD: pickup_end_time: {bag_create.pickup_end_time} (type: {type(bag_create.pickup_end_time)})")
+        
+        db_bag = SurpriseBag.model_validate(bag_create, update={"store_id": store_id})
+        logger.info(f"CRUD: Successfully created SurpriseBag model with ID: {db_bag.id}")
+        
+        session.add(db_bag)
+        session.commit()
+        session.refresh(db_bag)
+        logger.info(f"CRUD: Successfully committed surprise bag to database")
+        return db_bag
+    except Exception as e:
+        logger.error(f"CRUD: Failed to create surprise bag: {e}")
+        logger.error(f"CRUD: Exception type: {type(e)}")
+        logger.error(f"CRUD: Exception args: {e.args}")
+        session.rollback()
+        raise
 
 def get_surprise_bag_by_id(session: Session, bag_id: uuid.UUID) -> Optional[SurpriseBag]:
     return session.get(SurpriseBag, bag_id)
@@ -442,6 +497,22 @@ def get_surprise_bags_with_filters(
     items = session.exec(statement).all()
     
     return {"data": items, "count": total_count}
+
+def get_surprise_bags_by_store_id(
+    session: Session,
+    store_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100
+) -> List[SurpriseBag]:
+    """Get all surprise bags for a specific store"""
+    statement = (
+        select(SurpriseBag)
+        .where(SurpriseBag.store_id == store_id)
+        .options(selectinload(SurpriseBag.store))
+        .offset(skip)
+        .limit(limit)
+    )
+    return session.exec(statement).all()
 
 def update_surprise_bag(session: Session, db_bag: SurpriseBag, bag_in: SurpriseBagUpdate) -> SurpriseBag:
     bag_data = bag_in.model_dump(exclude_unset=True)

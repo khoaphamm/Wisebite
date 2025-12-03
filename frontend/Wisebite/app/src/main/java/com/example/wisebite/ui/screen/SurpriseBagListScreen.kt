@@ -1,6 +1,7 @@
 package com.example.wisebite.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +32,8 @@ import com.example.wisebite.data.model.SurpriseBag
 import com.example.wisebite.data.repository.ApiResult
 import com.example.wisebite.data.repository.SurpriseBagRepository
 import com.example.wisebite.ui.theme.*
+import com.example.wisebite.ui.component.ProfessionalSurpriseBagCard
+import com.example.wisebite.ui.component.ProfessionalSurpriseBagCardLarge
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -94,7 +97,7 @@ class SurpriseBagListViewModel(
                     bagsResult.data.forEach { bag ->
                         android.util.Log.d("SurpriseBagListViewModel", "Bag: ${bag.name} - Store: ${bag.store?.name}")
                     }
-                    bagsResult.data
+                    enhanceBagsWithImages(bagsResult.data)
                 } else {
                     android.util.Log.e("SurpriseBagListViewModel", "Failed to load surprise bags: $bagsResult")
                     emptyList()
@@ -117,6 +120,73 @@ class SurpriseBagListViewModel(
     
     fun clearErrorMessage() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    // Enhanced function to add professional food images to surprise bags
+    private fun enhanceBagsWithImages(bags: List<SurpriseBag>): List<SurpriseBag> {
+        val foodImages = mapOf(
+            // Vietnamese Food Categories
+            "combo" to listOf(
+                "https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Delicious meal
+                "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Mixed food platter
+                "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",  // Healthy food combo
+                "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" // Food bowl
+            ),
+            "thịt/cá" to listOf(
+                "https://images.unsplash.com/photo-1546833999-b9f581a1996d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Grilled meat
+                "https://images.unsplash.com/photo-1544943910-4c1dc44aab44?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Fresh fish
+                "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Meat platter
+                "https://images.unsplash.com/photo-1551218808-94e220e084d2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"  // Seafood
+            ),
+            "rau/củ" to listOf(
+                "https://images.unsplash.com/photo-1540420773420-3366772f4999?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Fresh vegetables
+                "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Vegetable salad
+                "https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Root vegetables
+                "https://images.unsplash.com/photo-1506976785307-8732e854ad03?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"  // Mixed vegetables
+            ),
+            "trái cây" to listOf(
+                "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Tropical fruits
+                "https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Fresh fruit mix
+                "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Citrus fruits
+                "https://images.unsplash.com/photo-1464207687429-7505649dae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"  // Berry mix
+            ),
+            "bánh mì" to listOf(
+                "https://images.unsplash.com/photo-1516684732162-798a0062be99?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Vietnamese bánh mì
+                "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Fresh bread
+                "https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Artisan bread
+                "https://images.unsplash.com/photo-1565895405307-2da9c1b9b7b0?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"  // Vietnamese sandwich
+            ),
+            "default" to listOf(
+                "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Gourmet food
+                "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Mixed cuisine
+                "https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", // Restaurant meal
+                "https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"  // Food platter
+            )
+        )
+
+        return bags.mapIndexed { index, bag ->
+            // If bag already has an image, keep it
+            if (!bag.imageUrl.isNullOrBlank()) {
+                return@mapIndexed bag
+            }
+
+            // Determine category for image selection using bagType
+            val category = when {
+                bag.bagType.lowercase().contains("combo") -> "combo"
+                bag.bagType.lowercase().contains("thịt") || bag.bagType.lowercase().contains("cá") -> "thịt/cá"
+                bag.bagType.lowercase().contains("rau") || bag.bagType.lowercase().contains("củ") -> "rau/củ"
+                bag.bagType.lowercase().contains("trái") || bag.bagType.lowercase().contains("cây") -> "trái cây"
+                bag.bagType.lowercase().contains("bánh") || bag.bagType.lowercase().contains("mì") -> "bánh mì"
+                else -> "default"
+            }
+
+            val categoryImages = foodImages[category] ?: foodImages["default"]!!
+            val imageUrl = categoryImages[index % categoryImages.size]
+
+            android.util.Log.d("SurpriseBagListViewModel", "Assigning image to bag '${bag.name}' (bagType: ${bag.bagType}): $imageUrl")
+
+            bag.copy(imageUrl = imageUrl)
+        }
     }
 }
 
@@ -263,177 +333,119 @@ fun SurpriseBagListScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(
-                        items = uiState.surpriseBags,
-                        key = { bag -> bag.id }
-                    ) { bag ->
-                        SurpriseBagListItem(
-                            bag = bag,
-                            onClick = { onBagClick(bag.id) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SurpriseBagListItem(
-    bag: SurpriseBag,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            // Header with store name and category
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = bag.store?.name ?: "Unknown Store",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    
-                    Text(
-                        text = bag.categoryDisplayName,
-                        fontSize = 12.sp,
-                        color = Orange600,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                
-                // Discount badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Red500.copy(alpha = 0.1f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "-${bag.formattedDiscountPercentage}",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Red500
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Bag name and description
-            Text(
-                text = bag.name,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            
-            bag.description?.let { desc ->
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = desc,
-                    fontSize = 12.sp,
-                    color = WarmGrey600,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Price and availability info
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = bag.formattedDiscountedPrice,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Green600
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = bag.formattedOriginalPrice,
-                            fontSize = 12.sp,
-                            color = WarmGrey500,
-                            style = androidx.compose.ui.text.TextStyle(
-                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
-                            )
-                        )
+                    // Featured Bags Section (first 3 bags with large cards)
+                    if (uiState.surpriseBags.isNotEmpty()) {
+                        item {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "✨ Nổi bật",
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                    
+                                    // Featured badge
+                                    Box(
+                                        modifier = Modifier
+                                            .background(
+                                                Color(0xFFFFD700).copy(alpha = 0.2f),
+                                                RoundedCornerShape(12.dp)
+                                            )
+                                            .border(
+                                                1.dp,
+                                                Color(0xFFFFD700).copy(alpha = 0.4f),
+                                                RoundedCornerShape(12.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "⭐ HOT",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFE65100)
+                                        )
+                                    }
+                                }
+                                
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    contentPadding = PaddingValues(horizontal = 4.dp)
+                                ) {
+                                    items(
+                                        items = uiState.surpriseBags.take(3),
+                                        key = { bag -> "featured_${bag.id}" }
+                                    ) { bag ->
+                                        ProfessionalSurpriseBagCardLarge(
+                                            bag = bag,
+                                            onClick = { onBagClick(bag.id) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                     
-                    Text(
-                        text = bag.quantityDisplay,
-                        fontSize = 12.sp,
-                        color = if (bag.quantityAvailable > 0) WarmGrey600 else Red500,
-                        fontWeight = if (bag.quantityAvailable > 0) FontWeight.Normal else FontWeight.Medium
-                    )
-                }
-                
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = "Pickup time",
-                            modifier = Modifier.size(14.dp),
-                            tint = WarmGrey600
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = bag.pickupTimeDisplay,
-                            fontSize = 12.sp,
-                            color = WarmGrey600
-                        )
+                    // All Bags Section (excluding featured bags)
+                    val remainingBags = if (uiState.surpriseBags.size > 3) {
+                        uiState.surpriseBags.drop(3)
+                    } else {
+                        emptyList()
                     }
                     
-                    bag.store?.let { store ->
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = "Location",
-                                modifier = Modifier.size(12.dp),
-                                tint = WarmGrey500
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(
-                                text = store.displayAddress,
-                                fontSize = 11.sp,
-                                color = WarmGrey500,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                    if (remainingBags.isNotEmpty()) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "🍽️ Tất cả Surprise Bags",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                                
+                                // Count badge
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            Color(0xFF4CAF50).copy(alpha = 0.1f),
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .border(
+                                            1.dp,
+                                            Color(0xFF4CAF50).copy(alpha = 0.3f),
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "${remainingBags.size} túi",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFF2E7D32)
+                                    )
+                                }
+                            }
+                        }
+                        
+                        items(
+                            items = remainingBags,
+                            key = { bag -> bag.id }
+                        ) { bag ->
+                            ProfessionalSurpriseBagCard(
+                                bag = bag,
+                                onClick = { onBagClick(bag.id) }
                             )
                         }
                     }
@@ -442,3 +454,5 @@ fun SurpriseBagListItem(
         }
     }
 }
+
+// Old SurpriseBagListItem removed - now using ProfessionalSurpriseBagCard

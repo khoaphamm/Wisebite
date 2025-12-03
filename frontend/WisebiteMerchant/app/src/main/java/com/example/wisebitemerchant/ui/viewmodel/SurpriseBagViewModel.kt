@@ -111,11 +111,20 @@ class SurpriseBagViewModel(
                 return@launch
             }
             
-            val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+            formatter.timeZone = TimeZone.getTimeZone("UTC")
             val now = Date()
             val pickupStart = Date(pickupStartTime.timeInMillis)
             val pickupEnd = Date(pickupEndTime.timeInMillis)
-            val availableUntil = Date(pickupStartTime.timeInMillis - 2 * 60 * 60 * 1000) // 2 hours before pickup
+            
+            // Calculate available_until as 2 hours before pickup, but ensure it's after now
+            val availableUntilCalculated = Date(pickupStartTime.timeInMillis - 2 * 60 * 60 * 1000) // 2 hours before pickup
+            val availableUntil = if (availableUntilCalculated.after(now)) {
+                availableUntilCalculated
+            } else {
+                // If 2 hours before pickup is in the past, use 1 hour from now as minimum
+                Date(now.time + 60 * 60 * 1000) // 1 hour from now
+            }
             
             val request = CreateSurpriseBagRequest(
                 name = name,
@@ -133,6 +142,27 @@ class SurpriseBagViewModel(
                 is_active = true,
                 is_auto_generated = false
             )
+            
+            // Log the request data for debugging
+            Log.d("SurpriseBagViewModel", "Creating surprise bag with data:")
+            Log.d("SurpriseBagViewModel", "name: $name")
+            Log.d("SurpriseBagViewModel", "description: $description")
+            Log.d("SurpriseBagViewModel", "bag_type: $category")
+            Log.d("SurpriseBagViewModel", "original_value: $originalValue")
+            Log.d("SurpriseBagViewModel", "discounted_price: $discountedPrice")
+            Log.d("SurpriseBagViewModel", "discount_percentage: $discountPercentageValue")
+            Log.d("SurpriseBagViewModel", "quantity_available: $quantity")
+            Log.d("SurpriseBagViewModel", "available_from: ${formatter.format(now)}")
+            Log.d("SurpriseBagViewModel", "available_until: ${formatter.format(availableUntil)}")
+            Log.d("SurpriseBagViewModel", "pickup_start_time: ${formatter.format(pickupStart)}")
+            Log.d("SurpriseBagViewModel", "pickup_end_time: ${formatter.format(pickupEnd)}")
+            Log.d("SurpriseBagViewModel", "Time validation:")
+            Log.d("SurpriseBagViewModel", "  now: ${now.time} (${formatter.format(now)})")
+            Log.d("SurpriseBagViewModel", "  availableUntil: ${availableUntil.time} (${formatter.format(availableUntil)})")
+            Log.d("SurpriseBagViewModel", "  pickupStart: ${pickupStart.time} (${formatter.format(pickupStart)})")
+            Log.d("SurpriseBagViewModel", "  pickupEnd: ${pickupEnd.time} (${formatter.format(pickupEnd)})")
+            Log.d("SurpriseBagViewModel", "  availableUntil > now: ${availableUntil.after(now)}")
+            Log.d("SurpriseBagViewModel", "  pickupStart > availableUntil: ${pickupStart.after(availableUntil)}")
             
             when (val result = repository.createSurpriseBag(request)) {
                 is ApiResult.Success -> {
@@ -184,7 +214,8 @@ class SurpriseBagViewModel(
             Log.d("SurpriseBagViewModel", "Updating surprise bag: $bagId")
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
-            val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+            formatter.timeZone = TimeZone.getTimeZone("UTC")
             val request = UpdateSurpriseBagRequest(
                 name = name,
                 description = description,
@@ -326,6 +357,7 @@ class SurpriseBagViewModelFactory(
 // Extension function to convert API response to domain model
 private fun SurpriseBagResponse.toSurpriseBag(): SurpriseBag {
     val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+    formatter.timeZone = TimeZone.getTimeZone("UTC")
     return SurpriseBag(
         id = id,
         name = name,

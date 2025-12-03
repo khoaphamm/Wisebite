@@ -11,14 +11,37 @@ router = APIRouter()
 @router.post("/", response_model=StorePublic, status_code=status.HTTP_201_CREATED)
 def create_store(session: SessionDep, current_vendor: CurrentVendor, store_in: StoreCreate):
     """ Vendor creates a new store. """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Creating store for vendor {current_vendor.id}")
+    logger.info(f"Store request data: {store_in}")
+    logger.info(f"  name: {store_in.name}")
+    logger.info(f"  description: {store_in.description}")
+    logger.info(f"  address: {store_in.address}")
+    logger.info(f"  logo_url: {store_in.logo_url}")
+    logger.info(f"  latitude: {store_in.latitude}")
+    logger.info(f"  longitude: {store_in.longitude}")
+    
     # Check if vendor already has a store
     existing_store = crud.get_store_by_owner_id(session=session, owner_id=current_vendor.id)
     if existing_store:
+        logger.warning(f"Vendor {current_vendor.id} already has a store {existing_store.id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Vendor already has a store"
         )
-    return crud.create_store(session=session, store_create=store_in, owner_id=current_vendor.id)
+    
+    logger.info(f"No existing store found, creating new store for vendor {current_vendor.id}")
+    
+    try:
+        result = crud.create_store(session=session, store_create=store_in, owner_id=current_vendor.id)
+        logger.info(f"Successfully created store {result.id} for vendor {current_vendor.id}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to create store for vendor {current_vendor.id}: {e}")
+        logger.error(f"Exception type: {type(e)}")
+        raise
 
 @router.get("/", response_model=List[StorePublic])
 def list_stores(

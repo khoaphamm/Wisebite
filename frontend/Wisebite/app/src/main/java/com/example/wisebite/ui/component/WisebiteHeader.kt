@@ -1,5 +1,6 @@
 package com.example.wisebite.ui.component
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -7,10 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.wisebite.R
 import com.example.wisebite.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,26 +39,14 @@ fun WisebiteHeader(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (showWiseBiteLogo) {
-                // WiseBite logo
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "WISE",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        text = "BITE",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Green500,
-                        letterSpacing = 1.sp
-                    )
-                }
+                // WiseBite logo image
+                Image(
+                    painter = painterResource(id = R.drawable.logo_wisebite),
+                    contentDescription = "WiseBite Logo",
+                    modifier = Modifier
+                        .height(60.dp)
+                        .fillMaxWidth()
+                )
                 
                 Spacer(modifier = Modifier.height(8.dp))
             }

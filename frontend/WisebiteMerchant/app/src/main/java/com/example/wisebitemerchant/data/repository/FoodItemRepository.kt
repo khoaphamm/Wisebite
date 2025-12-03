@@ -371,18 +371,19 @@ class FoodItemRepository private constructor(
     suspend fun getSurpriseBags(): ApiResult<List<SurpriseBagResponse>> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d("FoodItemRepository", "Fetching surprise bags...")
+                Log.d("FoodItemRepository", "Fetching merchant's own surprise bags...")
                 val authHeader = getAuthHeader()
                 if (authHeader == null) {
                     Log.e("FoodItemRepository", "Not authenticated")
                     return@withContext ApiResult.Error("Not authenticated")
                 }
                 
-                val response = apiService.getSurpriseBags(authorization = authHeader)
+                // Use the new endpoint that returns only the merchant's store bags
+                val response = apiService.getMyStoreSurpriseBags(authorization = authHeader)
                 if (response.isSuccessful && response.body() != null) {
-                    Log.d("FoodItemRepository", "Successfully fetched surprise bags")
+                    Log.d("FoodItemRepository", "Successfully fetched merchant's surprise bags")
                     val surpriseBagList = response.body()!!
-                    Log.d("FoodItemRepository", "Total surprise bags: ${surpriseBagList.count}, items: ${surpriseBagList.data.size}")
+                    Log.d("FoodItemRepository", "Merchant's surprise bags: ${surpriseBagList.count}, items: ${surpriseBagList.data.size}")
                     ApiResult.Success(surpriseBagList.data)
                 } else {
                     val errorMsg = "Failed to fetch surprise bags: ${response.message()}"
@@ -455,13 +456,27 @@ class FoodItemRepository private constructor(
                     Log.d("FoodItemRepository", "Surprise bag created successfully")
                     ApiResult.Success(response.body()!!)
                 } else {
-                    val errorMsg = "Failed to create surprise bag: ${response.code()} - ${response.message()}"
-                    Log.e("FoodItemRepository", errorMsg)
+                    // Read error body for detailed error message
+                    val errorBody = try {
+                        response.errorBody()?.string()
+                    } catch (e: Exception) {
+                        "Could not read error body: ${e.message}"
+                    }
                     
-                    // Additional debug info for 403 errors
-                    if (response.code() == 403) {
-                        Log.e("FoodItemRepository", "403 Forbidden - Check if user has vendor role and store")
-                        Log.e("FoodItemRepository", "Auth header being sent: ${authHeader?.take(100)}...")
+                    Log.e("FoodItemRepository", "Failed to create surprise bag:")
+                    Log.e("FoodItemRepository", "  Response code: ${response.code()}")
+                    Log.e("FoodItemRepository", "  Response message: ${response.message()}")
+                    Log.e("FoodItemRepository", "  Error body: $errorBody")
+                    
+                    val errorMsg = "Failed to create surprise bag: ${response.code()} - ${response.message()}\nError details: $errorBody"
+                    
+                    // Additional debug info for specific errors
+                    when (response.code()) {
+                        422 -> Log.e("FoodItemRepository", "422 Unprocessable Content - Validation error in request data")
+                        403 -> {
+                            Log.e("FoodItemRepository", "403 Forbidden - Check if user has vendor role and store")
+                            Log.e("FoodItemRepository", "Auth header being sent: ${authHeader?.take(100)}...")
+                        }
                     }
                     
                     ApiResult.Error(errorMsg)

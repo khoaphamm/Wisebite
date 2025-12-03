@@ -218,6 +218,13 @@ interface WisebiteApiService {
         @Query("limit") limit: Int = 100
     ): Response<SurpriseBagListResponse>
     
+    @GET("api/v1/surprise-bag/my-store")
+    suspend fun getMyStoreSurpriseBags(
+        @Header("Authorization") authorization: String,
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 100
+    ): Response<SurpriseBagListResponse>
+    
     @POST("api/v1/surprise-bag/")
     suspend fun createSurpriseBag(
         @Header("Authorization") authorization: String,

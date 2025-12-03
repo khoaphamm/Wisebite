@@ -1,6 +1,7 @@
 package com.example.wisebite.ui.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -52,6 +54,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.wisebite.R
 import com.example.wisebite.ui.theme.*
 import com.example.wisebite.ui.viewmodel.LoginViewModel
 import com.example.wisebite.ui.component.WisebiteInputField
@@ -192,12 +195,13 @@ fun LoginHeader() {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
     ) {
-        // App Logo - Fork and knife icon
-        Icon(
-            imageVector = Icons.Default.Restaurant,
+        // App Logo - WiseBite logo image
+        Image(
+            painter = painterResource(id = R.drawable.logo_wisebite),
             contentDescription = "WiseBite Logo",
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary
+            modifier = Modifier
+                .height(80.dp)
+                .fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))

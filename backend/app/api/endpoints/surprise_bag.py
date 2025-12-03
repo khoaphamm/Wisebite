@@ -17,13 +17,44 @@ router = APIRouter()
 @router.post("/", response_model=SurpriseBagPublic, status_code=status.HTTP_201_CREATED)
 def create_surprise_bag(session: SessionDep, current_vendor: CurrentVendor, bag_in: SurpriseBagCreate):
     """ Vendor creates a new Surprise Bag for their store. """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Creating surprise bag for vendor {current_vendor.id}")
+    logger.info(f"Request data: {bag_in}")
+    logger.info(f"  name: {bag_in.name}")
+    logger.info(f"  description: {bag_in.description}")
+    logger.info(f"  bag_type: {bag_in.bag_type}")
+    logger.info(f"  original_value: {bag_in.original_value}")
+    logger.info(f"  discounted_price: {bag_in.discounted_price}")
+    logger.info(f"  discount_percentage: {bag_in.discount_percentage}")
+    logger.info(f"  quantity_available: {bag_in.quantity_available}")
+    logger.info(f"  max_per_customer: {bag_in.max_per_customer}")
+    logger.info(f"  available_from: {bag_in.available_from} (type: {type(bag_in.available_from)})")
+    logger.info(f"  available_until: {bag_in.available_until} (type: {type(bag_in.available_until)})")
+    logger.info(f"  pickup_start_time: {bag_in.pickup_start_time} (type: {type(bag_in.pickup_start_time)})")
+    logger.info(f"  pickup_end_time: {bag_in.pickup_end_time} (type: {type(bag_in.pickup_end_time)})")
+    logger.info(f"  is_active: {bag_in.is_active}")
+    logger.info(f"  is_auto_generated: {bag_in.is_auto_generated}")
+    
     store = crud.get_store_by_owner_id(session=session, owner_id=current_vendor.id)
     if not store:
+        logger.error(f"Vendor {current_vendor.id} does not have a store")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vendor must have a store to create surprise bags"
         )
-    return crud.create_surprise_bag(session=session, bag_create=bag_in, store_id=store.id)
+    
+    logger.info(f"Found store {store.id} for vendor {current_vendor.id}")
+    
+    try:
+        result = crud.create_surprise_bag(session=session, bag_create=bag_in, store_id=store.id)
+        logger.info(f"Successfully created surprise bag {result.id}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to create surprise bag: {e}")
+        logger.error(f"Exception type: {type(e)}")
+        raise
 
 @router.get("/")
 def get_all_active_bags(
@@ -53,6 +84,24 @@ def get_my_bookings(
 ):
     """ Customer gets their surprise bag bookings. """
     return crud.get_customer_surprise_bag_bookings(session=session, customer_id=current_user.id, skip=skip, limit=limit)
+
+@router.get("/my-store")
+def get_my_store_bags(
+    session: SessionDep,
+    current_vendor: CurrentVendor,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000)
+):
+    """ Vendor gets surprise bags from their own store only. """
+    store = crud.get_store_by_owner_id(session=session, owner_id=current_vendor.id)
+    if not store:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vendor must have a store to view surprise bags"
+        )
+    
+    bags = crud.get_surprise_bags_by_store_id(session=session, store_id=store.id, skip=skip, limit=limit)
+    return {"data": bags, "count": len(bags)}
 
 @router.get("/{bag_id}", response_model=SurpriseBagPublic)
 def get_bag_by_id(session: SessionDep, bag_id: uuid.UUID):

@@ -282,9 +282,9 @@ class MerchantEditProfileViewModel(
                     if (originalStore != null) {
                         // Update existing store
                         val updatedStore = originalStore.copy(
-                            name = state.storeName.takeIf { it.isNotBlank() },
-                            description = state.storeDescription.ifBlank { null },
-                            address = state.storeAddress.takeIf { it.isNotBlank() },
+                            name = state.storeName.trim().takeIf { it.isNotBlank() },
+                            description = state.storeDescription.trim().ifBlank { null },
+                            address = state.storeAddress.trim().takeIf { it.isNotBlank() },
                             logoUrl = state.storeImageUrl
                         )
                         
@@ -299,9 +299,9 @@ class MerchantEditProfileViewModel(
                     } else {
                         // Create new store
                         val newStoreRequest = StoreCreateRequest(
-                            name = state.storeName,
-                            description = state.storeDescription.ifBlank { null },
-                            address = state.storeAddress,
+                            name = state.storeName.trim(),
+                            description = state.storeDescription.trim().ifBlank { null },
+                            address = state.storeAddress.trim(),
                             logoUrl = state.storeImageUrl
                         )
                         
